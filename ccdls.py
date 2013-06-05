@@ -83,11 +83,16 @@ class CCDLS(LoggingMixIn, Operations):
         return (errno.EPERM)
 
     def open(self, path, flags):
+        filename = path[1:]
+        if filename not in self.data_db.keys():
+            raise FuseOSError(errno.ENOENT)
         self.fd += 1
         return self.fd
 
     def read(self, path, size, offset, fh):
         filename = path[1:]
+        if filename not in self.data_db.keys():
+            raise FuseOSError(errno.ENOENT)
         block = self.data_db[filename]
         return (block.read(size, offset))
 
@@ -125,7 +130,11 @@ class CCDLS(LoggingMixIn, Operations):
         pass
 
     def write(self, path, data, offset, fh):
-        pass
+        filename = path[1:]
+        if filename not in self.data_db.keys():
+            raise FuseOSError(errno.ENOENT)
+        block = self.data_db[filename]
+        return (block.write(data, offset))
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
