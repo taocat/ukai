@@ -64,11 +64,11 @@ class CCDLSBlock:
     def gather_pieces(self, offset, size):
         assert size > 0
         assert offset >= 0
-        assert size + offset < self.meta.size
+        assert (size + offset) <= self.meta.size
 
         # pieces format: (block #, start position, length)
         start_block = offset / self.meta.block_size
-        end_block = (offset + size) / self.meta.block_size
+        end_block = (offset + size - 1) / self.meta.block_size
         start_block_pos = offset - (start_block * self.meta.block_size)
         end_block_pos = (offset + size) - (end_block * self.meta.block_size)
         pieces = []
@@ -95,7 +95,7 @@ class CCDLSBlock:
     def read(self, size, offset):
         assert size > 0
         assert offset >= 0
-        assert (offset + size) < self.meta.size
+        assert (offset + size) <= self.meta.size
 
         data = ''
         pieces = self.gather_pieces(offset, size)
@@ -129,12 +129,12 @@ class CCDLSBlock:
     def write(self, data, offset):
         assert data is not None
         assert offset >= 0
-        assert (offset + len(data)) < self.meta.size
+        assert (offset + len(data)) <= self.meta.size
 
         pieces = self.gather_pieces(offset, len(data))
+        data_offset = 0
         for piece in pieces:
             block_members = self.meta.get_block_members_of(piece[0])
-            data_offset = 0
             for node in block_members.keys():
                 if block_members[node]['synced'] is not True:
                     # XXX call a synchronize routine
@@ -144,7 +144,9 @@ class CCDLSBlock:
                                   block_members[node]['path'],
                                   piece[1],
                                   data[data_offset:data_offset + piece[2]])
-        # XXX ?
+            data_offset = data_offset + piece[2]
+
+        # XXX what value should we return?
         return (len(data))
 
     def put_data(self, node, path, offset, data):
@@ -176,8 +178,28 @@ if __name__ == "__main__":
     print 'CCDLSBlock'
     fh = CCDLSBlock(meta)
     data = 'Hello World!'
-    for i in range(0, 100):
-        pos = random.randint(0, meta.size - 100)
-        fh.write(data, pos)
-        if fh.read(len(data), pos) != data:
-            print 'error'
+    offset = 0
+    print 'offset %d' % offset
+    fh.write(data, offset)
+    ver = fh.read(len(data), offset)
+    if ver != data:
+        print 'error at offset %d' % offset
+
+    offset = meta.block_size - (len(data) / 2)
+    print 'offset %d' % offset
+    fh.write(data, offset)
+    ver = fh.read(len(data), offset)
+    if ver != data:
+        print ver
+        print 'error at offset %d' % offset
+    
+    block_count = meta.size / meta.block_size
+    if meta.size % meta.block_size:
+        block_count = block_count + 1
+    offset = (meta.block_size * block_count) - len(data)
+    print 'offset %d' % offset
+    fh.write(data, offset)
+    ver = fh.read(len(data), offset)
+    if ver != data:
+        print 'error at offset %d' % offset
+    
