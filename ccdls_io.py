@@ -132,7 +132,6 @@ class CCDLSBlock:
         assert (offset + len(data)) < self.meta.size
 
         pieces = self.gather_pieces(offset, len(data))
-        print pieces
         for piece in pieces:
             block_members = self.meta.get_block_members_of(piece[0])
             data_offset = 0
@@ -180,4 +179,5 @@ if __name__ == "__main__":
     for i in range(0, 100):
         pos = random.randint(0, meta.size - 100)
         fh.write(data, pos)
-        print fh.read(len(data), pos)
+        if fh.read(len(data), pos) != data:
+            print 'error'
