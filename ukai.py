@@ -31,10 +31,10 @@ import os
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
-from ccdls_config import CCDLSConfig
-from ccdls_io import CCDLSMeta, CCDLSBlock
+from ukai_config import UKAIConfig
+from ukai_io import UKAIMeta, UKAIBlock
 
-class CCDLS(LoggingMixIn, Operations):
+class UKAI(LoggingMixIn, Operations):
     """Example memory filesystem. Supports only one level of files."""
 
     def __init__(self):
@@ -43,12 +43,12 @@ class CCDLS(LoggingMixIn, Operations):
         self.fd = 0
 
         self.meta_db = {}
-        for meta_file in os.listdir(CCDLSConfig['meta_root']):
-            meta_path = '%s/%s' % (CCDLSConfig['meta_root'], meta_file)
-            self.meta_db[meta_file] = CCDLSMeta(meta_path)
+        for meta_file in os.listdir(UKAIConfig['meta_root']):
+            meta_path = '%s/%s' % (UKAIConfig['meta_root'], meta_file)
+            self.meta_db[meta_file] = UKAIMeta(meta_path)
         self.data_db = {}
         for meta_file in self.meta_db.keys():
-            self.data_db[meta_file] = CCDLSBlock(self.meta_db[meta_file])
+            self.data_db[meta_file] = UKAIBlock(self.meta_db[meta_file])
 
     def chmod(self, path, mode):
         print 'XXX chmod not supported'
@@ -145,4 +145,4 @@ if __name__ == "__main__":
     # for linux users: you may have /etc/fuse.conf in some linux
     # distributions.  in that case you need to add the 'user_allow_other'
     # parameter in the conf file to enable the 'allow_other' fuse option.
-    fuse = FUSE(CCDLS(), sys.argv[1], foreground=True, allow_other=True)
+    fuse = FUSE(UKAI(), sys.argv[1], foreground=True, allow_other=True)

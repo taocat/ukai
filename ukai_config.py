@@ -20,7 +20,8 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-CCDLSConfig = {
-    'image_root': '/var/ccdls/images',
-    'meta_root': '/var/ccdls/meta'
+UKAIConfig = {
+    'image_root': '/var/ukai/images',
+    'meta_root': '/var/ukai/meta',
+    'blockname_format': '%016d'
 }

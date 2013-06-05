@@ -23,9 +23,9 @@
 import sys
 import json
 
-from ccdls_config import CCDLSConfig
+from ukai_config import UKAIConfig
 
-class CCDLSMeta:
+class UKAIMeta:
     def __init__(self, meta_file):
         self.meta_file = meta_file
         self.reload()
@@ -48,16 +48,10 @@ class CCDLSMeta:
 
     def get_block_members_of(self, block_num):
         assert self.meta_db is not None
-        blocks = self.meta_db['blocks'][block_num]
-        block_members = blocks
-        for node in block_members.keys():
-            path = '%s/%s/%016d' % (CCDLSConfig['image_root'],
-                                    self.name,
-                                    block_num)
-            block_members[node]['path'] = path
-        return (block_members)
+        block = self.meta_db['blocks'][block_num]
+        return (block)
 
-class CCDLSBlock:
+class UKAIBlock:
     def __init__(self, metadata):
         self.meta = metadata
 
@@ -100,7 +94,10 @@ class CCDLSBlock:
         data = ''
         pieces = self.gather_pieces(offset, size)
         for piece in pieces:
-            block_members = self.meta.get_block_members_of(piece[0])
+            blk_num = piece[0]
+            off_in_blk = piece[1]
+            size_in_blk = piece[2]
+            block_members = self.meta.get_block_members_of(blk_num)
             candidate = None
             for node in block_members.keys():
                 if block_members[node]['synced'] is not True:
@@ -110,21 +107,45 @@ class CCDLSBlock:
                     break
                 candidate = node
             data = data + self.get_data(node,
-                                        block_members[node]['path'],
-                                        piece[1],
-                                        piece[2])
+                                        blk_num,
+                                        off_in_blk,
+                                        size_in_blk)
         return (data)
 
-    def get_data(self, node, path, offset, size):
-        # XXX
-        assert node == '127.0.0.1'
-        if node == '127.0.0.1':
-            fh = open(path, 'r')
-            fh.seek(offset)
-            data = fh.read(size)
-            fh.close()
-            assert data is not None
+
+    def is_local_node(self, node):
+        if (node == 'localhost'
+            or node == '127.0.0.1'
+            or node == '::1'):
+            return (True)
+        else:
+            return (False)
+
+    def get_data(self, node, num, offset, size):
+        if self.is_local_node(node):
+            return (self.get_data_local(node, num, offset, size))
+        else:
+            return (self.get_data_remote(node, num, offset, size))
+        
+
+    def get_data_local(self, node, num, offset, size):
+        assert size > 0
+        assert offset >= 0
+        assert (offset + size) <= self.meta.block_size
+
+        path = '%s/%s/' % (UKAIConfig['image_root'],
+                           self.meta.name)
+        path = path + UKAIConfig['blockname_format'] % num
+        fh = open(path, 'r')
+        fh.seek(offset)
+        data = fh.read(size)
+        fh.close()
+        assert data is not None
         return (data)
+
+    def get_data_remote(self, node, num, offset, size):
+        # XXX
+        print 'not implemented yet'
 
     def write(self, data, offset):
         assert data is not None
@@ -134,30 +155,43 @@ class CCDLSBlock:
         pieces = self.gather_pieces(offset, len(data))
         data_offset = 0
         for piece in pieces:
-            block_members = self.meta.get_block_members_of(piece[0])
+            blk_num = piece[0]
+            off_in_blk = piece[1]
+            size_in_blk = piece[2]
+            block_members = self.meta.get_block_members_of(blk_num)
             for node in block_members.keys():
                 if block_members[node]['synced'] is not True:
                     # XXX call a synchronize routine
                     pass
                 else:
                     self.put_data(node,
-                                  block_members[node]['path'],
-                                  piece[1],
-                                  data[data_offset:data_offset + piece[2]])
-            data_offset = data_offset + piece[2]
+                                  blk_num,
+                                  off_in_blk,
+                                  data[data_offset:data_offset + size_in_blk])
+            data_offset = data_offset + size_in_blk
 
         # XXX what value should we return?
         return (len(data))
 
-    def put_data(self, node, path, offset, data):
-        if node == '127.0.0.1':
-            fh = open(path, 'r+')
-            fh.seek(offset)
-            fh.write(data)
-            fh.close()
+    def put_data(self, node, num, offset, data):
+        if self.is_local_node(node):
+            return (self.put_data_local(node, num, offset, data))
         else:
-            # XXX remote put handling
-            pass
+            return (self.put_data_remote(node, num, offset, data))
+
+    def put_data_local(self, node, num, offset, data):
+        path = '%s/%s/' % (UKAIConfig['image_root'],
+                           self.meta.name)
+        path = path + UKAIConfig['blockname_format'] % num
+        fh = open(path, 'r+')
+        fh.seek(offset)
+        fh.write(data)
+        fh.close()
+        return (len(data))
+
+    def put_data_remote(self, node, num, offset, data):
+        # XXX
+        print 'not implemented yet'
 
 if __name__ == "__main__":
     import random
@@ -166,8 +200,8 @@ if __name__ == "__main__":
         print 'usage %s metadata_file' % sys.argv[0]
         sys.exit(1)
 
-    print 'CCDLSMeta'
-    meta = CCDLSMeta(sys.argv[1])
+    print 'UKAIMeta'
+    meta = UKAIMeta(sys.argv[1])
     print meta.meta_db
     print meta.name
     print meta.size
@@ -175,8 +209,8 @@ if __name__ == "__main__":
     print meta.get_block_members_of(0)
     print meta.get_block_members_of(1)
 
-    print 'CCDLSBlock'
-    fh = CCDLSBlock(meta)
+    print 'UKAIBlock'
+    fh = UKAIBlock(meta)
     data = 'Hello World!'
     offset = 0
     print 'offset %d' % offset
