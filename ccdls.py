@@ -51,10 +51,12 @@ class CCDLS(LoggingMixIn, Operations):
             self.data_db[meta_file] = CCDLSBlock(self.meta_db[meta_file])
 
     def chmod(self, path, mode):
-        return (errno.EPERM)
+        print 'XXX chmod not supported'
+        return (0)
 
     def chown(self, path, uid, gid):
-        return (errno.EPERM)
+        print 'XXX chwon not supported'
+        return (0)
 
     def create(self, path, mode):
         return (errno.EPERM)
@@ -140,4 +142,7 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print 'usage: %s <mountpoint>' % sys.argv[0]
         sys.exit(1)
-    fuse = FUSE(CCDLS(), sys.argv[1], foreground=True)
+    # for linux users: you may have /etc/fuse.conf in some linux
+    # distributions.  in that case you need to add the 'user_allow_other'
+    # parameter in the conf file to enable the 'allow_other' fuse option.
+    fuse = FUSE(CCDLS(), sys.argv[1], foreground=True, allow_other=True)
