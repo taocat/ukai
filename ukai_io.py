@@ -22,8 +22,11 @@
 
 import sys
 import json
+import xmlrpclib
 
 from ukai_config import UKAIConfig
+
+UKAI_PORT=22222
 
 class UKAIMeta:
     def __init__(self, meta_file):
@@ -192,6 +195,10 @@ class UKAIBlock:
     def put_data_remote(self, node, num, offset, data):
         # XXX
         print 'not implemented yet'
+        remote = xmlrpclib.ServerProxy('http://%s:%d/' %
+                                       (node,
+                                        UKAI_PORT))
+        remote.write(self.meta.name, num, offset, data)
 
 if __name__ == "__main__":
     import random
