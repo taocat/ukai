@@ -198,7 +198,7 @@ class UKAIBlock:
         remote = xmlrpclib.ServerProxy('http://%s:%d/' %
                                        (node,
                                         UKAI_PORT))
-        remote.write(self.meta.name, num, offset, data)
+        remote.write(self.meta.name, self.meta.block_size, num, offset, data)
 
 if __name__ == "__main__":
     import random
