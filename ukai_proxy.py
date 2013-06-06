@@ -20,20 +20,34 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 from ukai_config import UKAIConfig
 
 UKAI_PORT=22222
 
-class UKAIRemote:
-    def write(self, name, blk_num, offset, data):
-        print name, blk_num, offset, data
-
-
+class UKAIProxy:
+    def write(self, name, blk_size, blk_num, offset, data):
+        path = '%s/%s/' % (UKAIConfig['image_root'],
+                           name)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        path = path + UKAIConfig['blockname_format'] % blk_num
+        fh = 0
+        if not os.path.exists(path):
+            fh = open(path, 'w')
+            fh.seek(blk_size - 1)
+            fh.write('0')
+        else:
+            fh = open(path, 'r+')
+        fh.seek(offset)
+        fh.write(data)
+        fh.close()
+        return (len(data))
 
 if __name__ == "__main__":
     server = SimpleXMLRPCServer(('', UKAI_PORT))
     server.register_introspection_functions()
-    server.register_instance(UKAIRemote())
+    server.register_instance(UKAIProxy())
     server.serve_forever()
