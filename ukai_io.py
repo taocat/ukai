@@ -26,48 +26,51 @@ import xmlrpclib
 
 from ukai_config import UKAIConfig
 
-UKAI_PORT=22222
-
-class UKAIMeta:
-    def __init__(self, meta_file):
-        self.meta_file = meta_file
+class UKAIMetadata:
+    def __init__(self, metadata_file):
+        self.metadata_file = metadata_file
         self.reload()
 
     def reload(self):
-        fh = open(self.meta_file, 'r')
-        self.meta_db = json.load(fh)
+        fh = open(self.metadata_file, 'r')
+        self.metadata = json.load(fh)
+        fh.close()
+
+    def flush(self):
+        fh = open(self.metadata_file, 'w')
+        json.dump(self.metadata, fh)
+        fh.close()
 
     def get_name(self):
-        return (self.meta_db['name'])
+        return (self.metadata['name'])
     name = property(get_name)
 
     def get_size(self):
-        return (int(self.meta_db['size']))
+        return (int(self.metadata['size']))
     size = property(get_size)
 
     def get_block_size(self):
-        return (int(self.meta_db['block_size']))
+        return (int(self.metadata['block_size']))
     block_size = property(get_block_size)
 
-    def get_block_members_of(self, block_num):
-        assert self.meta_db is not None
-        block = self.meta_db['blocks'][block_num]
-        return (block)
+    def get_blocks(self):
+        return(self.metadata['blocks'])
+    blocks = property(get_blocks)
 
-class UKAIBlock:
+class UKAIData:
     def __init__(self, metadata):
-        self.meta = metadata
+        self.metadata = metadata
 
     def gather_pieces(self, offset, size):
         assert size > 0
         assert offset >= 0
-        assert (size + offset) <= self.meta.size
+        assert (size + offset) <= self.metadata.size
 
         # pieces format: (block #, start position, length)
-        start_block = offset / self.meta.block_size
-        end_block = (offset + size - 1) / self.meta.block_size
-        start_block_pos = offset - (start_block * self.meta.block_size)
-        end_block_pos = (offset + size) - (end_block * self.meta.block_size)
+        start_block = offset / self.metadata.block_size
+        end_block = (offset + size - 1) / self.metadata.block_size
+        start_block_pos = offset - (start_block * self.metadata.block_size)
+        end_block_pos = (offset + size) - (end_block * self.metadata.block_size)
         pieces = []
         if start_block == end_block:
             pieces.append((start_block,
@@ -78,7 +81,7 @@ class UKAIBlock:
                 if block == start_block:
                     pieces.append((block,
                                    start_block_pos,
-                                   self.meta.block_size - start_block_pos))
+                                   self.metadata.block_size - start_block_pos))
                 elif block == end_block:
                     pieces.append((block,
                                    0,
@@ -86,13 +89,13 @@ class UKAIBlock:
                 else:
                     pieces.append((block,
                                    0,
-                                   self.meta.block_size))
+                                   self.metadata.block_size))
         return (pieces)
 
     def read(self, size, offset):
         assert size > 0
         assert offset >= 0
-        assert (offset + size) <= self.meta.size
+        assert (offset + size) <= self.metadata.size
 
         data = ''
         pieces = self.gather_pieces(offset, size)
@@ -100,12 +103,12 @@ class UKAIBlock:
             blk_num = piece[0]
             off_in_blk = piece[1]
             size_in_blk = piece[2]
-            block_members = self.meta.get_block_members_of(blk_num)
+            block = self.metadata.blocks[blk_num]
             candidate = None
-            for node in block_members.keys():
-                if block_members[node]['synced'] is not True:
+            for node in block.keys():
+                if block[node]['synced'] is not True:
                     continue
-                if node == '127.0.0.1':
+                if self.is_local_node(node):
                     candidate = node
                     break
                 candidate = node
@@ -117,6 +120,7 @@ class UKAIBlock:
 
 
     def is_local_node(self, node):
+        # XXX should check interface addresses.
         if (node == 'localhost'
             or node == '127.0.0.1'
             or node == '::1'):
@@ -134,10 +138,10 @@ class UKAIBlock:
     def get_data_local(self, node, num, offset, size):
         assert size > 0
         assert offset >= 0
-        assert (offset + size) <= self.meta.block_size
+        assert (offset + size) <= self.metadata.block_size
 
         path = '%s/%s/' % (UKAIConfig['image_root'],
-                           self.meta.name)
+                           self.metadata.name)
         path = path + UKAIConfig['blockname_format'] % num
         fh = open(path, 'r')
         fh.seek(offset)
@@ -147,13 +151,17 @@ class UKAIBlock:
         return (data)
 
     def get_data_remote(self, node, num, offset, size):
-        # XXX
-        print 'not implemented yet'
+        remote = xmlrpclib.ServerProxy('http://%s:%d/' %
+                                       (node,
+                                        UKAIConfig['proxy_port']))
+        return (remote.read(self.metadata.name,
+                            self.metadata.block_size,
+                            num, offset).data)
 
     def write(self, data, offset):
         assert data is not None
         assert offset >= 0
-        assert (offset + len(data)) <= self.meta.size
+        assert (offset + len(data)) <= self.metadata.size
 
         pieces = self.gather_pieces(offset, len(data))
         data_offset = 0
@@ -161,9 +169,9 @@ class UKAIBlock:
             blk_num = piece[0]
             off_in_blk = piece[1]
             size_in_blk = piece[2]
-            block_members = self.meta.get_block_members_of(blk_num)
-            for node in block_members.keys():
-                if block_members[node]['synced'] is not True:
+            block = self.metadata.blocks[blk_num]
+            for node in block.keys():
+                if block[node]['synced'] is not True:
                     # XXX call a synchronize routine
                     pass
                 else:
@@ -184,7 +192,7 @@ class UKAIBlock:
 
     def put_data_local(self, node, num, offset, data):
         path = '%s/%s/' % (UKAIConfig['image_root'],
-                           self.meta.name)
+                           self.metadata.name)
         path = path + UKAIConfig['blockname_format'] % num
         fh = open(path, 'r+')
         fh.seek(offset)
@@ -193,31 +201,29 @@ class UKAIBlock:
         return (len(data))
 
     def put_data_remote(self, node, num, offset, data):
-        # XXX
-        print 'not implemented yet'
         remote = xmlrpclib.ServerProxy('http://%s:%d/' %
                                        (node,
-                                        UKAI_PORT))
-        remote.write(self.meta.name, self.meta.block_size, num, offset, data)
+                                        UKAIConfig['proxy_port']))
+        return (remote.write(self.metadata.name, self.metadata.block_size,
+                             num, offset, xmlrpclib.Binary(data)))
 
-if __name__ == "__main__":
-    import random
+if __name__ == '__main__':
+    UKAIConfig['image_root'] = './test/images'
+    UKAIConfig['meta_root'] = './test/meta'
 
-    if len(sys.argv) != 2:
-        print 'usage %s metadata_file' % sys.argv[0]
-        sys.exit(1)
-
-    print 'UKAIMeta'
-    meta = UKAIMeta(sys.argv[1])
-    print meta.meta_db
+    print 'UKAIMetadata'
+    meta = UKAIMetadata('./test/meta/test')
+    print meta.metadata
     print meta.name
     print meta.size
     print meta.block_size
-    print meta.get_block_members_of(0)
-    print meta.get_block_members_of(1)
+    print meta.blocks[0]
+    print meta.blocks[1]
+    print meta.blocks[2]
+    print meta.blocks[3]
 
-    print 'UKAIBlock'
-    fh = UKAIBlock(meta)
+    print 'UKAIData'
+    fh = UKAIData(meta)
     data = 'Hello World!'
     offset = 0
     print 'offset %d' % offset
