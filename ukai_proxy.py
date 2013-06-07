@@ -21,12 +21,13 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import os
+import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 from ukai_config import UKAIConfig
 
 class UKAIProxy:
-    def read(self, name, blk_size, blk_num, offset, data):
+    def read(self, name, blk_size, blk_num, offset, size):
         path = '%s/%s/' % (UKAIConfig['image_root'],
                            name)
         path = path + UKAIConfig['blockname_format'] % blk_num
@@ -57,6 +58,12 @@ class UKAIProxy:
         return (len(data))
 
 if __name__ == '__main__':
+    import sys
+    if sys.argv[1] == 'test':
+        UKAIConfig['image_root'] = './test/images'
+        UKAIConfig['meta_root'] = './test/meta'
+        print UKAIConfig
+
     server = SimpleXMLRPCServer(('', UKAIConfig['proxy_port']),
                                 logRequests=False)
     server.register_introspection_functions()
