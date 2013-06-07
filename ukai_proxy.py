@@ -25,10 +25,20 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 from ukai_config import UKAIConfig
 
-UKAI_PORT=22222
-
 class UKAIProxy:
-    def write(self, name, blk_size, blk_num, offset, data):
+    def read(self, name, blk_size, blk_num, offset, data):
+        path = '%s/%s/' % (UKAIConfig['image_root'],
+                           name)
+        path = path + UKAIConfig['blockname_format'] % blk_num
+        fh = open(path, 'r')
+        fh.seek(offset)
+        data = fh.read(size)
+        fh.close()
+        assert data is not None
+        return (xmlrpclib.Binary(data))
+
+    def write(self, name, blk_size, blk_num, offset, bin_data):
+        data = bin_data.data
         path = '%s/%s/' % (UKAIConfig['image_root'],
                            name)
         if not os.path.exists(path):
@@ -46,8 +56,9 @@ class UKAIProxy:
         fh.close()
         return (len(data))
 
-if __name__ == "__main__":
-    server = SimpleXMLRPCServer(('', UKAI_PORT))
+if __name__ == '__main__':
+    server = SimpleXMLRPCServer(('', UKAIConfig['proxy_port']),
+                                logRequests=False)
     server.register_introspection_functions()
     server.register_instance(UKAIProxy())
     server.serve_forever()
