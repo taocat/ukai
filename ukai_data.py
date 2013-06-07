@@ -21,41 +21,10 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import sys
-import json
 import xmlrpclib
 
+from ukai_metadata import UKAIMetadata
 from ukai_config import UKAIConfig
-
-class UKAIMetadata:
-    def __init__(self, metadata_file):
-        self.metadata_file = metadata_file
-        self.reload()
-
-    def reload(self):
-        fh = open(self.metadata_file, 'r')
-        self.metadata = json.load(fh)
-        fh.close()
-
-    def flush(self):
-        fh = open(self.metadata_file, 'w')
-        json.dump(self.metadata, fh)
-        fh.close()
-
-    def get_name(self):
-        return (self.metadata['name'])
-    name = property(get_name)
-
-    def get_size(self):
-        return (int(self.metadata['size']))
-    size = property(get_size)
-
-    def get_block_size(self):
-        return (int(self.metadata['block_size']))
-    block_size = property(get_block_size)
-
-    def get_blocks(self):
-        return(self.metadata['blocks'])
-    blocks = property(get_blocks)
 
 class UKAIData:
     def __init__(self, metadata):
@@ -211,18 +180,7 @@ if __name__ == '__main__':
     UKAIConfig['image_root'] = './test/images'
     UKAIConfig['meta_root'] = './test/meta'
 
-    print 'UKAIMetadata'
     meta = UKAIMetadata('./test/meta/test')
-    print meta.metadata
-    print meta.name
-    print meta.size
-    print meta.block_size
-    print meta.blocks[0]
-    print meta.blocks[1]
-    print meta.blocks[2]
-    print meta.blocks[3]
-
-    print 'UKAIData'
     fh = UKAIData(meta)
     data = 'Hello World!'
     offset = 0
