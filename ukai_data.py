@@ -22,6 +22,7 @@
 
 import sys
 import xmlrpclib
+import netifaces
 
 from ukai_metadata import UKAIMetadata
 from ukai_config import UKAIConfig
@@ -89,13 +90,13 @@ class UKAIData:
 
 
     def is_local_node(self, node):
-        # XXX should check interface addresses.
-        if (node == 'localhost'
-            or node == '127.0.0.1'
-            or node == '::1'):
-            return (True)
-        else:
-            return (False)
+        for interface in netifaces.interfaces():
+            ifaddresses = netifaces.ifaddresses(interface)
+            for family in ifaddresses.keys():
+                for addr in ifaddresses[family]:
+                    if node == addr['addr']:
+                        return (True)
+        return (False)
 
     def get_data(self, node, num, offset, size):
         if self.is_local_node(node):
