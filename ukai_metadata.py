@@ -57,9 +57,9 @@ class UKAIMetadata:
     blocks = property(get_blocks)
 
 if __name__ == '__main__':
-    UKAIConfig['image_root'] = './test/images'
-    UKAIConfig['meta_root'] = './test/meta'
-    meta = UKAIMetadata('./test/meta/test')
+    UKAIConfig['image_root'] = './test/local/images'
+    UKAIConfig['meta_root'] = './test/local/meta'
+    meta = UKAIMetadata('./test/local/meta/test')
     print 'metadata:', meta.metadata
     print 'name:', meta.name
     print 'size:', meta.size
