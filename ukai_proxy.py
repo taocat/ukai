@@ -20,6 +20,12 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+'''
+ukai_proxy.py: The ukai_proxy.py module is a proxy program to respond
+read and write operations requested by a primary UKAI node that runs
+a virtual machine related to the specific UKAI disk image.
+'''
+
 import os
 import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
@@ -27,7 +33,22 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer
 from ukai_config import UKAIConfig
 
 class UKAIProxy:
+    '''
+    The UKAIProxy class provides proxy read and write operations.
+    '''
+
     def read(self, name, blk_size, blk_num, offset, size):
+        '''
+        Reads data from a local store and returns the data in a XML
+        RPC Binary encoded format.
+
+        name: the disk image name.
+        blk_size: the block size of the disk image
+        blk_num: the index of the blocks arrray in the disk image.
+        offset: the position relateve to the beginning of the specified
+            block.
+        size: the length to be read from the specified block.
+        '''
         path = '%s/%s/' % (UKAIConfig['image_root'],
                            name)
         path = path + UKAIConfig['blockname_format'] % blk_num
@@ -39,6 +60,17 @@ class UKAIProxy:
         return (xmlrpclib.Binary(data))
 
     def write(self, name, blk_size, blk_num, offset, bin_data):
+        '''
+        Writes data to a local store and returns the number of written
+        data.
+
+        name: the disk image name.
+        blk_size: the block size of the disk image
+        blk_num: the index of the blocks arrray in the disk image.
+        offset: the position relateve to the beginning of the specified
+            block.
+        bin_data: the XML RPC Binary encoded data to be written.
+        '''
         data = bin_data.data
         path = '%s/%s/' % (UKAIConfig['image_root'],
                            name)
@@ -54,6 +86,10 @@ class UKAIProxy:
         return (len(data))
 
     def allocate_dataspace(self, name, block_size, block_num):
+        '''
+        Allocates an empty data block in a local store specified by
+        the block_num argument.
+        '''
         path = '%s/%s/' % (UKAIConfig['image_root'],
                            name)
         if not os.path.exists(path):
@@ -64,7 +100,6 @@ class UKAIProxy:
         fh.write('\0')
         fh.close()
         return (0)
-        
 
 if __name__ == '__main__':
     import sys

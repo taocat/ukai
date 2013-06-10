@@ -20,6 +20,17 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+'''
+The ukai_config.py module defines the global parameters of the
+UKAI system.
+
+iamge_root: the location of the backend image storage space.
+meta_root: the location of the backend metadata storage space.
+blockname_format: the filename format of each block data.
+proxy_port: the listening port of the UKAI system to receive
+    remote read/write operations.
+'''
+
 UKAIConfig = {
     'image_root': '/var/ukai/images',
     'meta_root': '/var/ukai/meta',

@@ -20,6 +20,11 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+'''
+The ukai_data.py module defines classes and functions to handle image
+data of the UKAI system.
+'''
+
 import sys
 import xmlrpclib
 import netifaces
@@ -28,10 +33,28 @@ from ukai_metadata import UKAIMetadata
 from ukai_config import UKAIConfig
 
 class UKAIData:
+    '''
+    The UKAIData class provides manipulation functions to modify the
+    disk image contents.
+    '''
+
     def __init__(self, metadata):
+        '''
+        Initializes the instance with the specified metadata object
+        created with the UKAIMetadata class.
+        '''
         self.metadata = metadata
 
     def gather_pieces(self, offset, size):
+        '''
+        Returns a list of tupples specifying which block and index in
+        the blocks are related to the offset and size of the disk
+        image.  The tupple format is shown below.
+          (block_index, start_position, length)
+
+        offset: offset from the beginning of the disk image.
+        size: the length of the data to be handled.
+        '''
         assert size > 0
         assert offset >= 0
         assert (size + offset) <= self.metadata.size
@@ -62,7 +85,29 @@ class UKAIData:
                                    self.metadata.block_size))
         return (pieces)
 
+    def is_local_node(self, node):
+        '''
+        Checks if node is this machine or not.  This function compares
+        the node variable and all the local network interface
+        addresses.
+
+        The node variable must be specified as IPv4 numeric address at
+        this moment.
+        '''
+        for interface in netifaces.interfaces():
+            ifaddresses = netifaces.ifaddresses(interface)
+            for family in ifaddresses.keys():
+                for addr in ifaddresses[family]:
+                    if node == addr['addr']:
+                        return (True)
+        return (False)
+
     def read(self, size, offset):
+        '''
+        Reads size bytes from the specified location in the disk image
+        specified as the offset argument.  The read data is returned
+        as a return value.
+        '''
         assert size > 0
         assert offset >= 0
         assert (offset + size) <= self.metadata.size
@@ -88,24 +133,32 @@ class UKAIData:
                                         size_in_blk)
         return (data)
 
-
-    def is_local_node(self, node):
-        for interface in netifaces.interfaces():
-            ifaddresses = netifaces.ifaddresses(interface)
-            for family in ifaddresses.keys():
-                for addr in ifaddresses[family]:
-                    if node == addr['addr']:
-                        return (True)
-        return (False)
-
     def get_data(self, node, num, offset, size):
+        '''
+        Returns a data read from a local store or a remote store
+        depending on the node location.
+
+        node: the target node from which we read the data.
+        num: the block index of the disk image.
+        offset: the offset relative to the beginning of the specified
+            block.
+        size: the length of the data to be read.
+        '''
         if self.is_local_node(node):
             return (self.get_data_local(node, num, offset, size))
         else:
             return (self.get_data_remote(node, num, offset, size))
-        
 
     def get_data_local(self, node, num, offset, size):
+        '''
+        Returns a data read from a local store.
+
+        node: the target node from which we read the data.
+        num: the block index of the disk image.
+        offset: the offset relative to the beginning of the specified
+            block.
+        size: the length of the data to be read.
+        '''
         assert size > 0
         assert offset >= 0
         assert (offset + size) <= self.metadata.block_size
@@ -121,6 +174,17 @@ class UKAIData:
         return (data)
 
     def get_data_remote(self, node, num, offset, size):
+        '''
+        Returns a data read from a remote store.  The remote read
+        command is sent to a remote proxy program using the XML RPC
+        mechanism.
+
+        node: the target node from which we read the data.
+        num: the block index of the disk image.
+        offset: the offset relative to the beginning of the specified
+            block.
+        size: the length of the data to be read.
+        '''
         remote = xmlrpclib.ServerProxy('http://%s:%d/' %
                                        (node,
                                         UKAIConfig['proxy_port']))
@@ -131,6 +195,11 @@ class UKAIData:
                             size).data)
 
     def write(self, data, offset):
+        '''
+        Writes the data from the specified location in the disk image
+        specified as the offset argument.  The method returns the
+        number of written data.
+        '''
         assert data is not None
         assert offset >= 0
         assert (offset + len(data)) <= self.metadata.size
@@ -151,16 +220,34 @@ class UKAIData:
                               data[data_offset:data_offset + size_in_blk])
             data_offset = data_offset + size_in_blk
 
-        # XXX what value should we return?
         return (len(data))
 
     def put_data(self, node, num, offset, data):
+        '''
+        Writes the data to a local store or a remote store depending
+        on the node location.
+
+        node: the target node from which we read the data.
+        num: the block index of the disk image.
+        offset: the offset relative to the beginning of the specified
+            block.
+        data: the data to be written.
+        '''
         if self.is_local_node(node):
             return (self.put_data_local(node, num, offset, data))
         else:
             return (self.put_data_remote(node, num, offset, data))
 
     def put_data_local(self, node, num, offset, data):
+        '''
+        Writes the data to a local store.
+
+        node: the target node from which we read the data.
+        num: the block index of the disk image.
+        offset: the offset relative to the beginning of the specified
+            block.
+        data: the data to be written.
+        '''
         path = '%s/%s/' % (UKAIConfig['image_root'],
                            self.metadata.name)
         path = path + UKAIConfig['blockname_format'] % num
@@ -171,6 +258,16 @@ class UKAIData:
         return (len(data))
 
     def put_data_remote(self, node, num, offset, data):
+        '''
+        Writes the data to a remote store.  The remote write command
+        is sent to a remote proxy program using the XML RPC mechanism.
+
+        node: the target node from which we read the data.
+        num: the block index of the disk image.
+        offset: the offset relative to the beginning of the specified
+            block.
+        data: the data to be written.
+        '''
         remote = xmlrpclib.ServerProxy('http://%s:%d/' %
                                        (node,
                                         UKAIConfig['proxy_port']))
@@ -178,6 +275,11 @@ class UKAIData:
                              num, offset, xmlrpclib.Binary(data)))
 
     def synchronize_block(self, block_num):
+        '''
+        Synchronizes the specified block by the block_num argument.
+        This function first search the already synchronized node block
+        and copy the data to all the other not-synchronized nodes.
+        '''
         block = self.metadata.blocks[block_num]
         source_candidate = None
         for node in block.keys():
@@ -208,6 +310,10 @@ class UKAIData:
         self.metadata.flush()
 
     def allocate_dataspace(self, node, block_num):
+        '''
+        Allocates an empty data block in a local store specified by
+        the block_num argument.
+        '''
         if self.is_local_node(node):
             path = '%s/%s/' % (UKAIConfig['image_root'],
                            self.metadata.name)
