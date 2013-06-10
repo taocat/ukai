@@ -27,18 +27,18 @@ from ukai_config import UKAIConfig
 
 def UKAIMetadataCreate(metadata_file, name, size, block_size, node):
     if size % block_size:
-        print u'size must be multiple of block_size'
+        print 'size must be multiple of block_size'
         exit(-1)
     block_count = size / block_size
     metadata_raw = {}
-    metadata_raw[u'name'] = name
-    metadata_raw[u'size'] = size
-    metadata_raw[u'block_size'] = block_size
-    metadata_raw[u'blocks'] = []
-    blocks = metadata_raw[u'blocks']
+    metadata_raw['name'] = name
+    metadata_raw['size'] = size
+    metadata_raw['block_size'] = block_size
+    metadata_raw['blocks'] = []
+    blocks = metadata_raw['blocks']
     print block_count
     for block_num in range(0, block_count):
-        node_entry = {node: {u'synced': True}}
+        node_entry = {node: {'synced': True}}
         blocks.append(node_entry)
 
     fh = open(metadata_file, 'w')
@@ -87,7 +87,7 @@ class UKAIMetadata:
                 # the specified node is already listed in this block.
                 continue
             block[node] = {}
-            block[node][u'synced'] = sync_status
+            block[node]['synced'] = sync_status
 
 if __name__ == '__main__':
     UKAIConfig['image_root'] = './test/local/images'
@@ -102,16 +102,16 @@ if __name__ == '__main__':
 
     for block in meta.blocks:
         for node in block.keys():
-            if node == u'192.168.100.100':
-                block[node][u'synced'] = False
+            if node == '192.168.100.100':
+                block[node]['synced'] = False
     meta.flush()
     for block in meta.blocks:
         for node in block.keys():
-            if node == u'192.168.100.100':
-                block[node][u'synced'] = True
+            if node == '192.168.100.100':
+                block[node]['synced'] = True
     meta.flush()
 
-    meta.add_remote(u'192.168.100.101')
+    meta.add_remote('192.168.100.101')
     print meta.blocks
 
-    meta.remove_remote(u'192.168.100.101')
+    meta.remove_remote('192.168.100.101')
