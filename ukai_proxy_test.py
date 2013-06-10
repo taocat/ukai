@@ -1,12 +1,12 @@
 import xmlrpclib
 
 from ukai_config import UKAIConfig
-from ukai_io import UKAIMetadata
+from ukai_metadata import UKAIMetadata
 
-UKAIConfig['image_root'] = './test/images'
-UKAIConfig['meta_root'] = './test/meta'
+UKAIConfig['image_root'] = './test/local/images'
+UKAIConfig['meta_root'] = './test/local/meta'
 
-meta = UKAIMetadata('./test/meta/test')
+meta = UKAIMetadata('./test/local/meta/test')
 
 s = xmlrpclib.ServerProxy('http://localhost:%d' % UKAIConfig['proxy_port'])
 print s.system.listMethods()

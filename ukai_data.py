@@ -75,13 +75,13 @@ class UKAIData:
             block = self.metadata.blocks[blk_num]
             candidate = None
             for node in block.keys():
-                if block[node]['synced'] is not True:
+                if block[node]['synced'] is False:
                     continue
                 if self.is_local_node(node):
                     candidate = node
                     break
                 candidate = node
-            data = data + self.get_data(node,
+            data = data + self.get_data(candidate,
                                         blk_num,
                                         off_in_blk,
                                         size_in_blk)
@@ -125,7 +125,9 @@ class UKAIData:
                                         UKAIConfig['proxy_port']))
         return (remote.read(self.metadata.name,
                             self.metadata.block_size,
-                            num, offset).data)
+                            num,
+                            offset,
+                            size).data)
 
     def write(self, data, offset):
         assert data is not None
@@ -140,14 +142,12 @@ class UKAIData:
             size_in_blk = piece[2]
             block = self.metadata.blocks[blk_num]
             for node in block.keys():
-                if block[node]['synced'] is not True:
-                    # XXX call a synchronize routine
-                    pass
-                else:
-                    self.put_data(node,
-                                  blk_num,
-                                  off_in_blk,
-                                  data[data_offset:data_offset + size_in_blk])
+                if block[node]['synced'] is False:
+                    self.synchronize_block(blk_num)
+                self.put_data(node,
+                              blk_num,
+                              off_in_blk,
+                              data[data_offset:data_offset + size_in_blk])
             data_offset = data_offset + size_in_blk
 
         # XXX what value should we return?
@@ -176,11 +176,58 @@ class UKAIData:
         return (remote.write(self.metadata.name, self.metadata.block_size,
                              num, offset, xmlrpclib.Binary(data)))
 
-if __name__ == '__main__':
-    UKAIConfig['image_root'] = './test/images'
-    UKAIConfig['meta_root'] = './test/meta'
+    def synchronize_block(self, block_num):
+        block = self.metadata.blocks[block_num]
+        source_candidate = None
+        for node in block.keys():
+            if block[node]['synced'] is False:
+                continue
+            if self.is_local_node(node):
+                source_candidate = node
+                break
+            source_candidate = node
+        if source_candidate == None:
+            # XXX fatal
+            # should raise an exception
+            print 'Disk broken'
+        for node in block.keys():
+            if block[node]['synced'] == True:
+                continue
+            if node == source_candidate:
+                continue
+            self.allocate_dataspace(node, block_num)
+            self.put_data(node,
+                          block_num,
+                          0,
+                          self.get_data(source_candidate,
+                                        block_num,
+                                        0,
+                                        self.metadata.block_size))
+            block[node]['synced'] = True
+        self.metadata.flush()
 
-    meta = UKAIMetadata('./test/meta/test')
+    def allocate_dataspace(self, node, block_num):
+        if self.is_local_node(node):
+            path = '%s/%s/' % (UKAIConfig['image_root'],
+                           self.metadata.name)
+            path = path + UKAIConfig['blockname_format'] % block_num
+            fh = open(path, 'w')
+            fh.seek(self.metadata.block_size - 1)
+            fh.write('\0')
+            fh.close()
+        else:
+            remote = xmlrpclib.ServerProxy('http://%s:%d/' %
+                                           (node,
+                                            UKAIConfig['proxy_port']))
+            remote.allocate_dataspace(self.metadata.name,
+                                      self.metadata.block_size,
+                                      block_num)
+
+if __name__ == '__main__':
+    UKAIConfig['image_root'] = './test/local/images'
+    UKAIConfig['meta_root'] = './test/local/meta'
+
+    meta = UKAIMetadata('./test/local/meta/test')
     fh = UKAIData(meta)
     data = 'Hello World!'
     offset = 0
@@ -208,3 +255,16 @@ if __name__ == '__main__':
     if ver != data:
         print 'error at offset %d' % offset
     
+    for block_num in range(0, meta.size / meta.block_size):
+        print 'sync block_num %d' % block_num
+        remote = xmlrpclib.ServerProxy('http://127.0.0.1:%d/' %
+                                       UKAIConfig['proxy_port'])
+        remote.allocate_dataspace(meta.name,
+                                  meta.block_size,
+                                  block_num)
+        remote.write(meta.name, meta.block_size,
+                     block_num, 0,
+                     xmlrpclib.Binary(fh.get_data_local('dummy',
+                                                        block_num,
+                                                        0,
+                                                        meta.block_size)))

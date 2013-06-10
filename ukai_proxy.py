@@ -42,26 +42,35 @@ class UKAIProxy:
         data = bin_data.data
         path = '%s/%s/' % (UKAIConfig['image_root'],
                            name)
-        if not os.path.exists(path):
-            os.makedirs(path)
         path = path + UKAIConfig['blockname_format'] % blk_num
-        fh = 0
         if not os.path.exists(path):
-            fh = open(path, 'w')
-            fh.seek(blk_size - 1)
-            fh.write('0')
-        else:
-            fh = open(path, 'r+')
+            # XXX should not happen.
+            # raise an exception
+            return (0)
+        fh = open(path, 'r+')
         fh.seek(offset)
         fh.write(data)
         fh.close()
         return (len(data))
 
+    def allocate_dataspace(self, name, block_size, block_num):
+        path = '%s/%s/' % (UKAIConfig['image_root'],
+                           name)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        path = path + UKAIConfig['blockname_format'] % block_num
+        fh = open(path, 'w')
+        fh.seek(block_size - 1)
+        fh.write('\0')
+        fh.close()
+        return (0)
+        
+
 if __name__ == '__main__':
     import sys
-    if sys.argv[1] == 'test':
-        UKAIConfig['image_root'] = './test/images'
-        UKAIConfig['meta_root'] = './test/meta'
+    if len(sys.argv) == 2 and sys.argv[1] == 'test':
+        UKAIConfig['image_root'] = './test/remote/images'
+        UKAIConfig['meta_root'] = './test/remote/meta'
         print UKAIConfig
 
     server = SimpleXMLRPCServer(('', UKAIConfig['proxy_port']),
