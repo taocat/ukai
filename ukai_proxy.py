@@ -37,21 +37,21 @@ class UKAIProxy:
     The UKAIProxy class provides proxy read and write operations.
     '''
 
-    def read(self, name, blk_size, blk_num, offset, size):
+    def read(self, name, blk_size, blk_idx, offset, size):
         '''
         Reads data from a local store and returns the data in a XML
         RPC Binary encoded format.
 
         name: the disk image name.
         blk_size: the block size of the disk image
-        blk_num: the index of the blocks arrray in the disk image.
+        blk_idx: the index of the blocks arrray in the disk image.
         offset: the position relateve to the beginning of the specified
             block.
         size: the length to be read from the specified block.
         '''
         path = '%s/%s/' % (UKAIConfig['image_root'],
                            name)
-        path = path + UKAIConfig['blockname_format'] % blk_num
+        path = path + UKAIConfig['blockname_format'] % blk_idx
         fh = open(path, 'r')
         fh.seek(offset)
         data = fh.read(size)
@@ -59,14 +59,14 @@ class UKAIProxy:
         assert data is not None
         return (xmlrpclib.Binary(data))
 
-    def write(self, name, blk_size, blk_num, offset, bin_data):
+    def write(self, name, blk_size, blk_idx, offset, bin_data):
         '''
         Writes data to a local store and returns the number of written
         data.
 
         name: the disk image name.
         blk_size: the block size of the disk image
-        blk_num: the index of the blocks arrray in the disk image.
+        blk_idx: the index of the blocks arrray in the disk image.
         offset: the position relateve to the beginning of the specified
             block.
         bin_data: the XML RPC Binary encoded data to be written.
@@ -74,7 +74,7 @@ class UKAIProxy:
         data = bin_data.data
         path = '%s/%s/' % (UKAIConfig['image_root'],
                            name)
-        path = path + UKAIConfig['blockname_format'] % blk_num
+        path = path + UKAIConfig['blockname_format'] % blk_idx
         if not os.path.exists(path):
             # XXX should not happen.
             # raise an exception
@@ -85,18 +85,18 @@ class UKAIProxy:
         fh.close()
         return (len(data))
 
-    def allocate_dataspace(self, name, block_size, block_num):
+    def allocate_dataspace(self, name, blk_size, blk_idx):
         '''
         Allocates an empty data block in a local store specified by
-        the block_num argument.
+        the blk_idx argument.
         '''
         path = '%s/%s/' % (UKAIConfig['image_root'],
                            name)
         if not os.path.exists(path):
             os.makedirs(path)
-        path = path + UKAIConfig['blockname_format'] % block_num
+        path = path + UKAIConfig['blockname_format'] % blk_idx
         fh = open(path, 'w')
-        fh.seek(block_size - 1)
+        fh.seek(blk_size - 1)
         fh.write('\0')
         fh.close()
         return (0)

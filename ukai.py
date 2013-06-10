@@ -143,6 +143,7 @@ if __name__ == "__main__":
     if len(sys.argv) != 2:
         print 'usage: %s <mountpoint>' % sys.argv[0]
         sys.exit(1)
+
     # for linux users: you may have /etc/fuse.conf in some linux
     # distributions.  in that case you need to add the 'user_allow_other'
     # parameter in the conf file to enable the 'allow_other' fuse option.

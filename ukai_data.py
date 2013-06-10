@@ -50,7 +50,7 @@ class UKAIData:
         Returns a list of tupples specifying which block and index in
         the blocks are related to the offset and size of the disk
         image.  The tupple format is shown below.
-          (block_index, start_position, length)
+          (block index, start position, length)
 
         offset: offset from the beginning of the disk image.
         size: the length of the data to be handled.
@@ -59,7 +59,7 @@ class UKAIData:
         assert offset >= 0
         assert (size + offset) <= self.metadata.size
 
-        # pieces format: (block #, start position, length)
+        # piece format: (block index, start position, length)
         start_block = offset / self.metadata.block_size
         end_block = (offset + size - 1) / self.metadata.block_size
         start_block_pos = offset - (start_block * self.metadata.block_size)
@@ -115,10 +115,10 @@ class UKAIData:
         data = ''
         pieces = self.gather_pieces(offset, size)
         for piece in pieces:
-            blk_num = piece[0]
+            blk_idx = piece[0]
             off_in_blk = piece[1]
             size_in_blk = piece[2]
-            block = self.metadata.blocks[blk_num]
+            block = self.metadata.blocks[blk_idx]
             candidate = None
             for node in block.keys():
                 if block[node]['synced'] is False:
@@ -128,12 +128,12 @@ class UKAIData:
                     break
                 candidate = node
             data = data + self.get_data(candidate,
-                                        blk_num,
+                                        blk_idx,
                                         off_in_blk,
                                         size_in_blk)
         return (data)
 
-    def get_data(self, node, num, offset, size):
+    def get_data(self, node, blk_idx, off_in_blk, size_in_blk):
         '''
         Returns a data read from a local store or a remote store
         depending on the node location.
@@ -144,12 +144,22 @@ class UKAIData:
             block.
         size: the length of the data to be read.
         '''
-        if self.is_local_node(node):
-            return (self.get_data_local(node, num, offset, size))
-        else:
-            return (self.get_data_remote(node, num, offset, size))
+        assert size_in_blk > 0
+        assert off_in_blk >= 0
+        assert (off_in_blk + size_in_blk) <= self.metadata.block_size
 
-    def get_data_local(self, node, num, offset, size):
+        if self.is_local_node(node):
+            return (self.get_data_local(node,
+                                        blk_idx,
+                                        off_in_blk,
+                                        size_in_blk))
+        else:
+            return (self.get_data_remote(node,
+                                         blk_idx,
+                                         off_in_blk,
+                                         size_in_blk))
+
+    def get_data_local(self, node, blk_idx, off_in_blk, size_in_blk):
         '''
         Returns a data read from a local store.
 
@@ -159,21 +169,17 @@ class UKAIData:
             block.
         size: the length of the data to be read.
         '''
-        assert size > 0
-        assert offset >= 0
-        assert (offset + size) <= self.metadata.block_size
-
         path = '%s/%s/' % (UKAIConfig['image_root'],
                            self.metadata.name)
-        path = path + UKAIConfig['blockname_format'] % num
+        path = path + UKAIConfig['blockname_format'] % blk_idx
         fh = open(path, 'r')
-        fh.seek(offset)
-        data = fh.read(size)
+        fh.seek(off_in_blk)
+        data = fh.read(size_in_blk)
         fh.close()
         assert data is not None
         return (data)
 
-    def get_data_remote(self, node, num, offset, size):
+    def get_data_remote(self, node, blk_idx, off_in_blk, size_in_blk):
         '''
         Returns a data read from a remote store.  The remote read
         command is sent to a remote proxy program using the XML RPC
@@ -190,9 +196,9 @@ class UKAIData:
                                         UKAIConfig['proxy_port']))
         return (remote.read(self.metadata.name,
                             self.metadata.block_size,
-                            num,
-                            offset,
-                            size).data)
+                            blk_idx,
+                            off_in_blk,
+                            size_in_blk).data)
 
     def write(self, data, offset):
         '''
@@ -207,22 +213,22 @@ class UKAIData:
         pieces = self.gather_pieces(offset, len(data))
         data_offset = 0
         for piece in pieces:
-            blk_num = piece[0]
+            blk_idx = piece[0]
             off_in_blk = piece[1]
             size_in_blk = piece[2]
-            block = self.metadata.blocks[blk_num]
+            block = self.metadata.blocks[blk_idx]
             for node in block.keys():
                 if block[node]['synced'] is False:
-                    self.synchronize_block(blk_num)
+                    self.synchronize_block(blk_idx)
                 self.put_data(node,
-                              blk_num,
+                              blk_idx,
                               off_in_blk,
                               data[data_offset:data_offset + size_in_blk])
             data_offset = data_offset + size_in_blk
 
         return (len(data))
 
-    def put_data(self, node, num, offset, data):
+    def put_data(self, node, blk_idx, off_in_blk, data):
         '''
         Writes the data to a local store or a remote store depending
         on the node location.
@@ -233,12 +239,21 @@ class UKAIData:
             block.
         data: the data to be written.
         '''
-        if self.is_local_node(node):
-            return (self.put_data_local(node, num, offset, data))
-        else:
-            return (self.put_data_remote(node, num, offset, data))
+        assert off_in_blk >= 0
+        assert (off_in_blk + len(data)) <= self.metadata.block_size
 
-    def put_data_local(self, node, num, offset, data):
+        if self.is_local_node(node):
+            return (self.put_data_local(node,
+                                        blk_idx,
+                                        off_in_blk,
+                                        data))
+        else:
+            return (self.put_data_remote(node,
+                                         blk_idx,
+                                         off_in_blk,
+                                         data))
+
+    def put_data_local(self, node, blk_idx, off_in_blk, data):
         '''
         Writes the data to a local store.
 
@@ -250,14 +265,14 @@ class UKAIData:
         '''
         path = '%s/%s/' % (UKAIConfig['image_root'],
                            self.metadata.name)
-        path = path + UKAIConfig['blockname_format'] % num
+        path = path + UKAIConfig['blockname_format'] % blk_idx
         fh = open(path, 'r+')
-        fh.seek(offset)
+        fh.seek(off_in_blk)
         fh.write(data)
         fh.close()
         return (len(data))
 
-    def put_data_remote(self, node, num, offset, data):
+    def put_data_remote(self, node, blk_idx, off_in_blk, data):
         '''
         Writes the data to a remote store.  The remote write command
         is sent to a remote proxy program using the XML RPC mechanism.
@@ -271,16 +286,19 @@ class UKAIData:
         remote = xmlrpclib.ServerProxy('http://%s:%d/' %
                                        (node,
                                         UKAIConfig['proxy_port']))
-        return (remote.write(self.metadata.name, self.metadata.block_size,
-                             num, offset, xmlrpclib.Binary(data)))
+        return (remote.write(self.metadata.name,
+                             self.metadata.block_size,
+                             blk_idx,
+                             off_in_blk,
+                             xmlrpclib.Binary(data)))
 
-    def synchronize_block(self, block_num):
+    def synchronize_block(self, blk_idx):
         '''
-        Synchronizes the specified block by the block_num argument.
+        Synchronizes the specified block by the blk_idx argument.
         This function first search the already synchronized node block
         and copy the data to all the other not-synchronized nodes.
         '''
-        block = self.metadata.blocks[block_num]
+        block = self.metadata.blocks[blk_idx]
         source_candidate = None
         for node in block.keys():
             if block[node]['synced'] is False:
@@ -298,26 +316,26 @@ class UKAIData:
                 continue
             if node == source_candidate:
                 continue
-            self.allocate_dataspace(node, block_num)
+            self.allocate_dataspace(node, blk_idx)
             self.put_data(node,
-                          block_num,
+                          blk_idx,
                           0,
                           self.get_data(source_candidate,
-                                        block_num,
+                                        blk_idx,
                                         0,
                                         self.metadata.block_size))
             block[node]['synced'] = True
         self.metadata.flush()
 
-    def allocate_dataspace(self, node, block_num):
+    def allocate_dataspace(self, node, blk_idx):
         '''
         Allocates an empty data block in a local store specified by
-        the block_num argument.
+        the blk_idx argument.
         '''
         if self.is_local_node(node):
             path = '%s/%s/' % (UKAIConfig['image_root'],
                            self.metadata.name)
-            path = path + UKAIConfig['blockname_format'] % block_num
+            path = path + UKAIConfig['blockname_format'] % blk_idx
             fh = open(path, 'w')
             fh.seek(self.metadata.block_size - 1)
             fh.write('\0')
@@ -328,7 +346,7 @@ class UKAIData:
                                             UKAIConfig['proxy_port']))
             remote.allocate_dataspace(self.metadata.name,
                                       self.metadata.block_size,
-                                      block_num)
+                                      blk_idx)
 
 if __name__ == '__main__':
     UKAIConfig['image_root'] = './test/local/images'
