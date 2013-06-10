@@ -25,6 +25,26 @@ import json
 
 from ukai_config import UKAIConfig
 
+def UKAIMetadataCreate(metadata_file, name, size, block_size, node):
+    if size % block_size:
+        print u'size must be multiple of block_size'
+        exit(-1)
+    block_count = size / block_size
+    metadata_raw = {}
+    metadata_raw[u'name'] = name
+    metadata_raw[u'size'] = size
+    metadata_raw[u'block_size'] = block_size
+    metadata_raw[u'blocks'] = []
+    blocks = metadata_raw[u'blocks']
+    print block_count
+    for block_num in range(0, block_count):
+        node_entry = {node: {u'synced': True}}
+        blocks.append(node_entry)
+
+    fh = open(metadata_file, 'w')
+    json.dump(metadata_raw, fh)
+    fh.close()
+
 class UKAIMetadata:
     def __init__(self, metadata_file):
         self.metadata_file = metadata_file
@@ -32,35 +52,48 @@ class UKAIMetadata:
 
     def reload(self):
         fh = open(self.metadata_file, 'r')
-        self.metadata = json.load(fh)
+        self.metadata_raw = json.load(fh)
         fh.close()
 
     def flush(self):
         fh = open(self.metadata_file, 'w')
-        json.dump(self.metadata, fh)
+        json.dump(self.metadata_raw, fh)
         fh.close()
 
     def get_name(self):
-        return (self.metadata['name'])
+        return (self.metadata_raw['name'])
     name = property(get_name)
 
     def get_size(self):
-        return (int(self.metadata['size']))
+        return (int(self.metadata_raw['size']))
     size = property(get_size)
 
     def get_block_size(self):
-        return (int(self.metadata['block_size']))
+        return (int(self.metadata_raw['block_size']))
     block_size = property(get_block_size)
 
     def get_blocks(self):
-        return(self.metadata['blocks'])
+        return(self.metadata_raw['blocks'])
     blocks = property(get_blocks)
+
+    def add_remote(self, node, start_block=0, end_block=-1, sync_status=False):
+        if end_block == -1:
+            end_block = self.size / self.block_size
+        assert start_block <= end_block
+
+        for block_num in range(start_block, end_block):
+            block = self.blocks[block_num]
+            if node in block:
+                # the specified node is already listed in this block.
+                continue
+            block[node] = {}
+            block[node][u'synced'] = sync_status
 
 if __name__ == '__main__':
     UKAIConfig['image_root'] = './test/local/images'
     UKAIConfig['meta_root'] = './test/local/meta'
     meta = UKAIMetadata('./test/local/meta/test')
-    print 'metadata:', meta.metadata
+    print 'metadata:', meta.metadata_raw
     print 'name:', meta.name
     print 'size:', meta.size
     print 'block_size:', meta.block_size
@@ -69,11 +102,16 @@ if __name__ == '__main__':
 
     for block in meta.blocks:
         for node in block.keys():
-            if node == '192.168.100.100':
-                block[node]['synced'] = False
+            if node == u'192.168.100.100':
+                block[node][u'synced'] = False
     meta.flush()
     for block in meta.blocks:
         for node in block.keys():
-            if node == '192.168.100.100':
-                block[node]['synced'] = True
+            if node == u'192.168.100.100':
+                block[node][u'synced'] = True
     meta.flush()
+
+    meta.add_remote(u'192.168.100.101')
+    print meta.blocks
+
+    meta.remove_remote(u'192.168.100.101')
