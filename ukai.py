@@ -32,7 +32,8 @@ import os
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
 from ukai_config import UKAIConfig
-from ukai_io import UKAIMeta, UKAIBlock
+from ukai_metadata import UKAIMetadata
+from ukai_data import UKAIData
 
 class UKAI(LoggingMixIn, Operations):
     """Example memory filesystem. Supports only one level of files."""
@@ -45,10 +46,10 @@ class UKAI(LoggingMixIn, Operations):
         self.meta_db = {}
         for meta_file in os.listdir(UKAIConfig['meta_root']):
             meta_path = '%s/%s' % (UKAIConfig['meta_root'], meta_file)
-            self.meta_db[meta_file] = UKAIMeta(meta_path)
+            self.meta_db[meta_file] = UKAIMetadata(meta_path)
         self.data_db = {}
         for meta_file in self.meta_db.keys():
-            self.data_db[meta_file] = UKAIBlock(self.meta_db[meta_file])
+            self.data_db[meta_file] = UKAIData(self.meta_db[meta_file])
 
     def chmod(self, path, mode):
         print 'XXX chmod not supported'
