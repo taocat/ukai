@@ -89,6 +89,27 @@ class UKAIMetadata:
             block[node] = {}
             block[node]['synced'] = sync_status
 
+    def remove_remote(self, node, start_block=0, end_block=-1):
+        if end_block == -1:
+            end_block = self.size / self.block_size
+        assert start_block <= end_block
+
+        can_be_removed = True
+        for block_num in range(start_block, end_block):
+            block = self.blocks[block_num]
+            has_synced_node = False
+            for member_node in block.keys():
+                if member_node == node:
+                    continue
+                if block[member_node]['synced'] is True:
+                    has_synced_node = True
+                    break
+            if has_synced_node is False:
+                print 'block %d does not have synced block' % block_num
+                can_be_removed = False
+                break
+            del block[node]
+
 if __name__ == '__main__':
     UKAIConfig['image_root'] = './test/local/images'
     UKAIConfig['meta_root'] = './test/local/meta'
@@ -115,3 +136,4 @@ if __name__ == '__main__':
     print meta.blocks
 
     meta.remove_remote('192.168.100.101')
+    print meta.blocks
