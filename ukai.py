@@ -22,7 +22,9 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from collections import defaultdict
+'''
+The ukai.py module is a top level module of the UKAI implementation.
+'''
 
 import sys
 import stat
@@ -36,33 +38,55 @@ from ukai_metadata import UKAIMetadata
 from ukai_data import UKAIData
 
 class UKAI(LoggingMixIn, Operations):
-    """Example memory filesystem. Supports only one level of files."""
+    '''
+    The UKAI class is an implementaion of centrally controllable
+    distributed local storage system, built on top of the FUSE
+    mechanism.
+    '''
 
     def __init__(self):
-        self.files = {}
-        self.data = defaultdict(str)
-        self.fd = 0
+        '''
+        Initializes metadata dictionary and data dictionary.
+        '''
 
+        # read all the metadata stored under the
+        # UKAIConfig['meta_root'] path.
         self.meta_db = {}
         for meta_file in os.listdir(UKAIConfig['meta_root']):
             meta_path = '%s/%s' % (UKAIConfig['meta_root'], meta_file)
             self.meta_db[meta_file] = UKAIMetadata(meta_path)
+
+        # initialize UKAIData instances for each metadata instance.
         self.data_db = {}
         for meta_file in self.meta_db.keys():
             self.data_db[meta_file] = UKAIData(self.meta_db[meta_file])
 
     def chmod(self, path, mode):
+        '''
+        Sets the file mode (not implemented).
+        '''
         print 'XXX chmod not supported'
         return (0)
 
     def chown(self, path, uid, gid):
+        '''
+        Sets the file owner (not implemented).
+        '''
         print 'XXX chwon not supported'
         return (0)
 
     def create(self, path, mode):
+        '''
+        Creates a new file.
+
+        The UKAI filesystem does not support this operation.
+        '''
         return (errno.EPERM)
 
     def getattr(self, path, fh=None):
+        '''
+        Returns a file stat information.
+        '''
         if path == '/':
             st = dict(st_mode=(stat.S_IFDIR | 0755), st_ctime=0,
                       st_mtime=0, st_atime=0, st_nlink=2)
@@ -77,15 +101,39 @@ class UKAI(LoggingMixIn, Operations):
         return st
 
     def getxattr(self, path, name, position=0):
-        return ('')
+        '''
+        Returns the extended attribute value specified by the name
+        argument.
+
+        The UKAI filesystem does not support The extended attribute
+        mechanism.
+        '''
+        # XXX is ENODATA OK? there is no ENOATTR or ENOTSUPP error
+        # codes in python.
+        raise FuseOSError(errno.ENODATA)
 
     def listxattr(self, path):
+        '''
+        Returns all the extended attributed of the specified path.
+
+        The UKAI filesystem does not support the extended attribute
+        mechanism.
+        '''
         return ([])
 
     def mkdir(self, path, mode):
+        '''
+        Creates a new directory.
+
+        The UKAI filesystem does not support this operation.
+        '''
         return (errno.EPERM)
 
     def open(self, path, flags):
+        '''
+        Opens and returns a filehandle of the open file specified by
+        the path parameter.
+        '''
         filename = path[1:]
         if filename not in self.data_db.keys():
             raise FuseOSError(errno.ENOENT)
@@ -93,6 +141,10 @@ class UKAI(LoggingMixIn, Operations):
         return self.fd
 
     def read(self, path, size, offset, fh):
+        '''
+        Reads the specified length of data from the specified path
+        with the specified length and offset, and returns the data.
+        '''
         filename = path[1:]
         if filename not in self.data_db.keys():
             raise FuseOSError(errno.ENOENT)
@@ -100,39 +152,95 @@ class UKAI(LoggingMixIn, Operations):
         return (block.read(size, offset))
 
     def readdir(self, path, fh):
+        '''
+        Returns a list of node name entries under the path specified
+        by the path argument.
+        '''
         return (['.', '..'] + self.meta_db.keys())
 
     def readlink(self, path):
+        '''
+        Returns the original file path of the symbolic link file
+        specified by the path argument.
+
+        The UKAI filesystem does not support this operation.
+        '''
         return (errno.EPERM)
 
     def removexattr(self, path, name):
+        '''
+        Removes the extended attribute entry specified by the name
+        argument.
+
+        The UKAI filesystem does not support The extended attribute
+        mechanism.
+        '''
         return (errno.EPERM)
 
     def rename(self, old, new):
+        '''
+        Renames a file.
+
+        The UKAI filesystem does not support this operation.
+        '''
         return (errno.EPERM)
 
     def rmdir(self, path):
+        '''
+        Removes a directory.
+
+        The UKAI filesystem does not support this operation.
+        '''
         return (errno.EPERM)
 
     def setxattr(self, path, name, value, options, position=0):
+        '''
+        Sets the extended attribute entry specified by the arguments.
+
+        The UKAI filesystem does not support The extended attribute
+        mechanism.
+        '''
         return (errno.EPERM)
 
     def statfs(self, path):
+        '''
+        Returns the file system information.  So far, the returned
+        values are meaningless.
+        '''
         return dict(f_bsize=512, f_blocks=4096, f_bavail=2048)
 
     def symlink(self, target, source):
+        '''
+        Creates a symbolic link file.
+
+        The UKAI filesystem does not support this operation.
+        '''
         return (errno.EPERM)
 
     def truncate(self, path, length, fh=None):
+        '''
+        Truncates the specified file to the specified length.
+
+        The UKAI filesystem does not support this operation.
+        '''
         return (errno.EPERM)
 
     def unlink(self, path):
+        '''
+        Removes the specified file.
+
+        The UKAI filesystem does not support this operation.
+        '''
         return (errno.EPERM)
 
     def utimens(self, path, times=None):
         pass
 
     def write(self, path, data, offset, fh):
+        '''
+        Writes the specified data to the specified path with the
+        specified offset.
+        '''
         filename = path[1:]
         if filename not in self.data_db.keys():
             raise FuseOSError(errno.ENOENT)
