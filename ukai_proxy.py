@@ -32,7 +32,7 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 from ukai_config import UKAIConfig
 
-class UKAIProxy:
+class UKAIProxy(object):
     '''
     The UKAIProxy class provides proxy read and write operations.
     '''
