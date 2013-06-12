@@ -105,7 +105,7 @@ if __name__ == '__main__':
     import sys
     if len(sys.argv) == 2 and sys.argv[1] == 'test':
         UKAIConfig['image_root'] = './test/remote/images'
-        UKAIConfig['meta_root'] = './test/remote/meta'
+        UKAIConfig['metadata_root'] = './test/remote/meta'
         print UKAIConfig
 
     server = SimpleXMLRPCServer(('', UKAIConfig['proxy_port']),

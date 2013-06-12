@@ -53,16 +53,16 @@ class UKAI(LoggingMixIn, Operations):
         self._fd = 0
 
         # read all the metadata stored under the
-        # UKAIConfig['meta_root'] path.
+        # UKAIConfig['metadata_root'] path.
         self._metadata_set = {}
-        for metadata_file in os.listdir(UKAIConfig['meta_root']):
-            metadata_path = '%s/%s' % (UKAIConfig['meta_root'], metadata_file)
-            self._metadata_set[metadata_file] = UKAIMetadata(metadata_path)
+        for image_name in os.listdir(UKAIConfig['metadata_root']):
+            metadata_path = '%s/%s' % (UKAIConfig['metadata_root'], image_name)
+            self._metadata_set[image_name] = UKAIMetadata(metadata_path)
 
         # initialize UKAIData instances for each metadata instance.
         self._data_set = {}
-        for metadata_file in self.metadata_set.keys():
-            self.data_set[metadata_file] = UKAIData(self.metadata_set[metadata_file])
+        for image_name in self.metadata_set.keys():
+            self.data_set[image_name] = UKAIData(self.metadata_set[image_name])
 
     @property
     def metadata_set(self):
@@ -108,11 +108,11 @@ class UKAI(LoggingMixIn, Operations):
             st = dict(st_mode=(stat.S_IFDIR | 0755), st_ctime=0,
                       st_mtime=0, st_atime=0, st_nlink=2)
         else:
-            filename = path[1:]
-            if filename in self.metadata_set:
+            image_name = path[1:]
+            if self._exists(image_name):
                 st = dict(st_mode=(stat.S_IFREG | 0644), st_ctime=0,
                           st_mtime=0, st_atime=0, st_nlink=1,
-                          st_size=self.metadata_set[filename].size)
+                          st_size=self.metadata_set[image_name].size)
             else:
                 raise FuseOSError(errno.ENOENT)
         return st
@@ -130,8 +130,8 @@ class UKAI(LoggingMixIn, Operations):
         Opens and returns a filehandle of the open file specified by
         the path parameter.
         '''
-        filename = path[1:]
-        if filename not in self.data_set:
+        image_name = path[1:]
+        if not self._exists(image_name):
             raise FuseOSError(errno.ENOENT)
         self._fd += 1
         return self._fd
@@ -141,11 +141,11 @@ class UKAI(LoggingMixIn, Operations):
         Reads the specified length of data from the specified path
         with the specified length and offset, and returns the data.
         '''
-        filename = path[1:]
-        if filename not in self.data_set:
+        image_name = path[1:]
+        if not self._exists(image_name):
             raise FuseOSError(errno.ENOENT)
-        data = self.data_set[filename]
-        return (data.read(size, offset))
+        image_data = self.data_set[image_name]
+        return (image_data.read(size, offset))
 
     def readdir(self, path, fh):
         '''
@@ -160,16 +160,6 @@ class UKAI(LoggingMixIn, Operations):
         specified by the path argument.
 
         The UKAI filesystem does not support this operation.
-        '''
-        return (errno.EPERM)
-
-    def removexattr(self, path, name):
-        '''
-        Removes the extended attribute entry specified by the name
-        argument.
-
-        The UKAI filesystem does not support The extended attribute
-        mechanism.
         '''
         return (errno.EPERM)
 
@@ -228,11 +218,18 @@ class UKAI(LoggingMixIn, Operations):
         Writes the specified data to the specified path with the
         specified offset.
         '''
-        filename = path[1:]
-        if filename not in self.data_set:
+        image_name = path[1:]
+        if not self._exists(image_name):
             raise FuseOSError(errno.ENOENT)
-        data = self.data_set[filename]
-        return (data.write(data, offset))
+        image_data = self.data_set[image_name]
+        return (image_data.write(data, offset))
+
+    def _exists(self, image_name):
+        if image_name not in self.metadata_set:
+            return (False)
+        if image_name not in self.data_set:
+            return (False)
+        return (True)
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:

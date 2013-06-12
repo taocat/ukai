@@ -181,7 +181,7 @@ class UKAIMetadata(object):
 
 if __name__ == '__main__':
     UKAIConfig['image_root'] = './test/local/images'
-    UKAIConfig['meta_root'] = './test/local/meta'
+    UKAIConfig['metadata_root'] = './test/local/meta'
     meta = UKAIMetadata('./test/local/meta/test')
     print 'metadata:', meta._metadata
     print 'name:', meta.name
