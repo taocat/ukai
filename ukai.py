@@ -42,8 +42,8 @@ from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 from ukai_config import UKAIConfig
 from ukai_metadata import UKAIMetadata
 from ukai_data import UKAIData
-from ukai_control import UKAIControlHandler
-from ukai_proxy import UKAIProxyHandler
+from ukai_control import UKAIControlWorker
+from ukai_proxy import UKAIProxyWorker
 
 class UKAI(LoggingMixIn, Operations):
     '''
@@ -87,13 +87,13 @@ class UKAI(LoggingMixIn, Operations):
         '''
 
         # launch a control request handler.
-        self._ctrl_thread = threading.Thread(target=UKAIControlHandler,
+        self._ctrl_thread = threading.Thread(target=UKAIControlWorker,
                                              args=(self.metadata_set,
                                                    self.data_set,))
         self._ctrl_thread.start()
 
         # launch a proxy request handler.
-        self._proxy_thread = threading.Thread(target=UKAIProxyHandler)
+        self._proxy_thread = threading.Thread(target=UKAIProxyWorker)
         self._proxy_thread.start()
 
     def destroy(self, path):

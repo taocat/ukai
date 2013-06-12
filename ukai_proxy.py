@@ -22,7 +22,7 @@
 
 '''
 The ukai_proxy.py module provides proxy functions and classes to
-respond read and write operations requested by a primary UKAI node
+krespond read and write operations requested by a primary UKAI node
 that runs a virtual machine related to the specific UKAI disk image.
 '''
 
@@ -32,7 +32,7 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 from ukai_config import UKAIConfig
 
-def UKAIProxyHandler():
+def UKAIProxyWorker():
     server = SimpleXMLRPCServer(('', UKAIConfig['proxy_port']),
                                 logRequests=False)
     server.register_instance(UKAIProxy())

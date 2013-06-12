@@ -28,7 +28,7 @@ from ukai_config import UKAIConfig
 from ukai_metadata import UKAIMetadata
 from ukai_data import UKAIData
 
-def UKAIControlHandler(metadata_set, data_set):
+def UKAIControlWorker(metadata_set, data_set):
     server = SimpleXMLRPCServer(('localhost',
                                  UKAIConfig['control_port']),
                                 logRequests=False)
