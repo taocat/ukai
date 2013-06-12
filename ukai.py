@@ -64,20 +64,6 @@ class UKAI(LoggingMixIn, Operations):
         self._ctrl_thread = None
         self._proxy_thread = None
 
-    @property
-    def metadata_set(self):
-        '''
-        The set of all the metadata information in this UKAI node.
-        '''
-        return (self._metadata_set)
-
-    @property
-    def data_set(self):
-        '''
-        The set of all the data information in this UKAI node.
-        '''
-        return (self._data_set)
-
     def init(self, path):
         '''
         Starts worker threads.
@@ -85,8 +71,8 @@ class UKAI(LoggingMixIn, Operations):
 
         # launch a control request handler.
         self._ctrl_thread = threading.Thread(target=UKAIControlWorker,
-                                             args=(self.metadata_set,
-                                                   self.data_set,))
+                                             args=(self._metadata_set,
+                                                   self._data_set,))
         self._ctrl_thread.start()
 
         # launch a proxy request handler.
@@ -132,7 +118,7 @@ class UKAI(LoggingMixIn, Operations):
             if self._exists(image_name):
                 st = dict(st_mode=(stat.S_IFREG | 0644), st_ctime=0,
                           st_mtime=0, st_atime=0, st_nlink=1,
-                          st_size=self.metadata_set[image_name].size)
+                          st_size=self._metadata_set[image_name].size)
             else:
                 raise FuseOSError(errno.ENOENT)
         return st
@@ -164,7 +150,7 @@ class UKAI(LoggingMixIn, Operations):
         image_name = path[1:]
         if not self._exists(image_name):
             raise FuseOSError(errno.ENOENT)
-        image_data = self.data_set[image_name]
+        image_data = self._data_set[image_name]
         return (image_data.read(size, offset))
 
     def readdir(self, path, fh):
@@ -172,7 +158,7 @@ class UKAI(LoggingMixIn, Operations):
         Returns a list of node name entries under the path specified
         by the path argument.
         '''
-        return (['.', '..'] + self.metadata_set.keys())
+        return (['.', '..'] + self._metadata_set.keys())
 
     def readlink(self, path):
         '''
@@ -241,13 +227,13 @@ class UKAI(LoggingMixIn, Operations):
         image_name = path[1:]
         if not self._exists(image_name):
             raise FuseOSError(errno.ENOENT)
-        image_data = self.data_set[image_name]
+        image_data = self._data_set[image_name]
         return (image_data.write(data, offset))
 
     def _exists(self, image_name):
-        if image_name not in self.metadata_set:
+        if image_name not in self._metadata_set:
             return (False)
-        if image_name not in self.data_set:
+        if image_name not in self._data_set:
             return (False)
         return (True)
 
