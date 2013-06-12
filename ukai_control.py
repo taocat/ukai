@@ -58,6 +58,6 @@ class UKAIControl(object):
 
     def get_metadata(self, image_name):
         if image_name not in self._metadata_set:
-            return (-1)
+            return ('')
         metadata = self._metadata_set[image_name]
-        return(json.dumps(metadata._metadata))
+        return(json.dumps(metadata.metadata))

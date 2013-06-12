@@ -99,6 +99,13 @@ class UKAIMetadata(object):
         fh.close()
 
     @property
+    def metadata(self):
+        '''
+        A metadata dictionary object.
+        '''
+        return(self._metadata)
+
+    @property
     def name(self):
         '''
         The name of the disk image.
