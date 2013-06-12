@@ -50,19 +50,33 @@ class UKAI(LoggingMixIn, Operations):
         '''
 
         # open file discripter.
-        self.fd = 0
+        self._fd = 0
 
         # read all the metadata stored under the
         # UKAIConfig['meta_root'] path.
-        self.meta_db = {}
-        for meta_file in os.listdir(UKAIConfig['meta_root']):
-            meta_path = '%s/%s' % (UKAIConfig['meta_root'], meta_file)
-            self.meta_db[meta_file] = UKAIMetadata(meta_path)
+        self._metadata_set = {}
+        for metadata_file in os.listdir(UKAIConfig['meta_root']):
+            metadata_path = '%s/%s' % (UKAIConfig['meta_root'], metadata_file)
+            self._metadata_set[metadata_file] = UKAIMetadata(metadata_path)
 
         # initialize UKAIData instances for each metadata instance.
-        self.data_db = {}
-        for meta_file in self.meta_db.keys():
-            self.data_db[meta_file] = UKAIData(self.meta_db[meta_file])
+        self._data_set = {}
+        for metadata_file in self.metadata_set.keys():
+            self.data_set[metadata_file] = UKAIData(self.metadata_set[metadata_file])
+
+    @property
+    def metadata_set(self):
+        '''
+        The set of all the metadata information in this UKAI node.
+        '''
+        return (self._metadata_set)
+
+    @property
+    def data_set(self):
+        '''
+        The set of all the data information in this UKAI node.
+        '''
+        return (self._data_set)
 
     def chmod(self, path, mode):
         '''
@@ -95,10 +109,10 @@ class UKAI(LoggingMixIn, Operations):
                       st_mtime=0, st_atime=0, st_nlink=2)
         else:
             filename = path[1:]
-            if filename in self.meta_db:
+            if filename in self.metadata_set:
                 st = dict(st_mode=(stat.S_IFREG | 0644), st_ctime=0,
                           st_mtime=0, st_atime=0, st_nlink=1,
-                          st_size=self.meta_db[filename].size)
+                          st_size=self.metadata_set[filename].size)
             else:
                 raise FuseOSError(errno.ENOENT)
         return st
@@ -117,10 +131,10 @@ class UKAI(LoggingMixIn, Operations):
         the path parameter.
         '''
         filename = path[1:]
-        if filename not in self.data_db.keys():
+        if filename not in self.data_set:
             raise FuseOSError(errno.ENOENT)
-        self.fd += 1
-        return self.fd
+        self._fd += 1
+        return self._fd
 
     def read(self, path, size, offset, fh):
         '''
@@ -128,17 +142,17 @@ class UKAI(LoggingMixIn, Operations):
         with the specified length and offset, and returns the data.
         '''
         filename = path[1:]
-        if filename not in self.data_db.keys():
+        if filename not in self.data_set:
             raise FuseOSError(errno.ENOENT)
-        block = self.data_db[filename]
-        return (block.read(size, offset))
+        data = self.data_set[filename]
+        return (data.read(size, offset))
 
     def readdir(self, path, fh):
         '''
         Returns a list of node name entries under the path specified
         by the path argument.
         '''
-        return (['.', '..'] + self.meta_db.keys())
+        return (['.', '..'] + self.metadata_set.keys())
 
     def readlink(self, path):
         '''
@@ -215,10 +229,10 @@ class UKAI(LoggingMixIn, Operations):
         specified offset.
         '''
         filename = path[1:]
-        if filename not in self.data_db.keys():
+        if filename not in self.data_set:
             raise FuseOSError(errno.ENOENT)
-        block = self.data_db[filename]
-        return (block.write(data, offset))
+        data = self.data_set[filename]
+        return (data.write(data, offset))
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
