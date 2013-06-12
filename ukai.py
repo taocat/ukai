@@ -23,7 +23,10 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 '''
-The ukai.py module is a top level module of the UKAI implementation.
+The ukai.py module is a top level module of the UKAI implementation
+that provides a filesystem interface based on the concept of
+'Centrally Controllable Distributed Local Storage' system for virtual
+machine disk image storage.
 '''
 
 import sys

@@ -21,9 +21,9 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 '''
-ukai_proxy.py: The ukai_proxy.py module is a proxy program to respond
-read and write operations requested by a primary UKAI node that runs
-a virtual machine related to the specific UKAI disk image.
+The ukai_proxy.py module provides proxy functions and classes to
+respond read and write operations requested by a primary UKAI node
+that runs a virtual machine related to the specific UKAI disk image.
 '''
 
 import os
