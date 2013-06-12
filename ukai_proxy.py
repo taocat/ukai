@@ -32,6 +32,12 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 from ukai_config import UKAIConfig
 
+def UKAIProxyHandler():
+    server = SimpleXMLRPCServer(('', UKAIConfig['proxy_port']),
+                                logRequests=False)
+    server.register_instance(UKAIProxy())
+    server.serve_forever()
+
 class UKAIProxy(object):
     '''
     The UKAIProxy class provides proxy read and write operations.
@@ -110,6 +116,5 @@ if __name__ == '__main__':
 
     server = SimpleXMLRPCServer(('', UKAIConfig['proxy_port']),
                                 logRequests=False)
-    server.register_introspection_functions()
     server.register_instance(UKAIProxy())
     server.serve_forever()

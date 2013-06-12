@@ -35,5 +35,6 @@ UKAIConfig = {
     'image_root': '/var/ukai/images',
     'metadata_root': '/var/ukai/meta',
     'blockname_format': '%016d',
+    'control_port': 22221,
     'proxy_port': 22222
 }

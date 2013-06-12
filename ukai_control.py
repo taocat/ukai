@@ -24,10 +24,14 @@ import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 import json
 
+from ukai_config import UKAIConfig
+from ukai_metadata import UKAIMetadata
+from ukai_data import UKAIData
+
 def UKAIControlHandler(metadata_set, data_set):
-    server = SimpleXMLRPCServer(('127.0.0.1', 22223),
+    server = SimpleXMLRPCServer(('localhost',
+                                 UKAIConfig['control_port']),
                                 logRequests=False)
-    server.register_introspection_functions()
     server.register_instance(UKAIControl(metadata_set, data_set))
     server.serve_forever()
 
@@ -36,8 +40,24 @@ class UKAIControl(object):
         self._metadata_set = metadata_set
         self._data_set = data_set
 
-    def metadata(self, image_name):
+    def add_image(self, image_name):
+        if image_name in self._metadata_set:
+            return (-1)
+        metadata_path = '%s/%s' % (UKAIConfig['metadata_root'], image_name)
+        metadata = UKAIMetadata(metadata_path)
+        self._metadata_set[image_name] = metadata
+        self._data_set[image_name] = UKAIData(metadata)
+        return (0)
+
+    def remove_image(self, image_name):
         if image_name not in self._metadata_set:
-            return ('')
+            return (-1)
+        del self._metadata_set[image_name]
+        del self._data_set[image_name]
+        return (0)
+
+    def get_metadata(self, image_name):
+        if image_name not in self._metadata_set:
+            return (-1)
         metadata = self._metadata_set[image_name]
         return(json.dumps(metadata._metadata))

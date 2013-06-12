@@ -29,7 +29,6 @@ The ukai.py module is a top level module of the UKAI implementation.
 import sys
 import stat
 import errno
-import os
 import threading
 import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
@@ -40,7 +39,8 @@ from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 from ukai_config import UKAIConfig
 from ukai_metadata import UKAIMetadata
 from ukai_data import UKAIData
-from ukai_control import UKAIControl, UKAIControlHandler
+from ukai_control import UKAIControlHandler
+from ukai_proxy import UKAIProxyHandler
 
 class UKAI(LoggingMixIn, Operations):
     '''
@@ -60,8 +60,9 @@ class UKAI(LoggingMixIn, Operations):
         self._metadata_set = {}
         # a set of data.
         self._data_set = {}
-        # control request handler thread
+        # control and proxy handler threads
         self._ctrl_thread = None
+        self._proxy_thread = None
 
     @property
     def metadata_set(self):
@@ -79,23 +80,19 @@ class UKAI(LoggingMixIn, Operations):
 
     def init(self, path):
         '''
-        Initializes metadata dictionary and data dictionary, and
-        starts the control request hander thread.
+        Starts worker threads.
         '''
-        # read all the metadata stored under the
-        # UKAIConfig['metadata_root'] path.
-        for image_name in os.listdir(UKAIConfig['metadata_root']):
-            metadata_path = '%s/%s' % (UKAIConfig['metadata_root'], image_name)
-            self._metadata_set[image_name] = UKAIMetadata(metadata_path)
 
-        # initialize UKAIData instances for each metadata instance.
-        for image_name in self.metadata_set.keys():
-            self.data_set[image_name] = UKAIData(self.metadata_set[image_name])
-
-        # launch the control request handler thread.
+        # launch a control request handler.
         self._ctrl_thread = threading.Thread(target=UKAIControlHandler,
                                              args=(self.metadata_set,
-                                                   self.data_set,)).start()
+                                                   self.data_set,))
+        self._ctrl_thread.start()
+
+        # launch a proxy request handler.
+        self._proxy_thread = threading.Thread(target=UKAIProxyHandler)
+        self._proxy_thread.start()
+
     def destroy(self, path):
         '''
         Does some clean ups.
