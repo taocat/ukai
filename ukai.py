@@ -49,6 +49,9 @@ class UKAI(LoggingMixIn, Operations):
         Initializes metadata dictionary and data dictionary.
         '''
 
+        # open file discripter.
+        self.fd = 0
+
         # read all the metadata stored under the
         # UKAIConfig['meta_root'] path.
         self.meta_db = {}
@@ -99,27 +102,6 @@ class UKAI(LoggingMixIn, Operations):
             else:
                 raise FuseOSError(errno.ENOENT)
         return st
-
-    def getxattr(self, path, name, position=0):
-        '''
-        Returns the extended attribute value specified by the name
-        argument.
-
-        The UKAI filesystem does not support The extended attribute
-        mechanism.
-        '''
-        # XXX is ENODATA OK? there is no ENOATTR or ENOTSUPP error
-        # codes in python.
-        raise FuseOSError(errno.ENODATA)
-
-    def listxattr(self, path):
-        '''
-        Returns all the extended attributed of the specified path.
-
-        The UKAI filesystem does not support the extended attribute
-        mechanism.
-        '''
-        return ([])
 
     def mkdir(self, path, mode):
         '''
@@ -190,15 +172,6 @@ class UKAI(LoggingMixIn, Operations):
         Removes a directory.
 
         The UKAI filesystem does not support this operation.
-        '''
-        return (errno.EPERM)
-
-    def setxattr(self, path, name, value, options, position=0):
-        '''
-        Sets the extended attribute entry specified by the arguments.
-
-        The UKAI filesystem does not support The extended attribute
-        mechanism.
         '''
         return (errno.EPERM)
 
