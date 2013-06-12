@@ -33,9 +33,6 @@ import sys
 import stat
 import errno
 import threading
-import xmlrpclib
-from SimpleXMLRPCServer import SimpleXMLRPCServer
-import json
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
