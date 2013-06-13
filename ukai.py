@@ -41,6 +41,7 @@ from ukai_metadata import UKAIMetadata
 from ukai_data import UKAIData
 from ukai_control import UKAIControlWorker
 from ukai_proxy import UKAIProxyWorker
+from ukai_node_error_state import UKAINodeErrorStateSet
 
 class UKAI(LoggingMixIn, Operations):
     '''
@@ -56,10 +57,14 @@ class UKAI(LoggingMixIn, Operations):
 
         # open file discripter.
         self._fd = 0
-        # a set of metadada.
+
+        # sets of metadada and data structure.
         self._metadata_set = {}
-        # a set of data.
         self._data_set = {}
+
+        # node failure state.
+        self._node_error_state_set = UKAINodeErrorStateSet()
+
         # control and proxy handler threads
         self._ctrl_thread = None
         self._proxy_thread = None
@@ -72,7 +77,8 @@ class UKAI(LoggingMixIn, Operations):
         # launch a control request handler.
         self._ctrl_thread = threading.Thread(target=UKAIControlWorker,
                                              args=(self._metadata_set,
-                                                   self._data_set,))
+                                                   self._data_set,
+                                                   self._node_error_state_set,))
         self._ctrl_thread.start()
 
         # launch a proxy request handler.

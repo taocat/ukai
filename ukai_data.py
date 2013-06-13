@@ -38,19 +38,13 @@ class UKAIData(object):
     disk image contents.
     '''
 
-    def __init__(self, metadata):
+    def __init__(self, metadata, node_error_state_set):
         '''
         Initializes the instance with the specified metadata object
         created with the UKAIMetadata class.
         '''
         self._metadata = metadata
-
-    @property
-    def metadata(self):
-        '''
-        The metadata of this data instance.
-        '''
-        return (self._metadata)
+        self._node_error_state_set = node_error_state_set
 
     def _gather_pieces(self, offset, size):
         '''
@@ -64,13 +58,13 @@ class UKAIData(object):
         '''
         assert size > 0
         assert offset >= 0
-        assert (size + offset) <= self.metadata.size
+        assert (size + offset) <= self._metadata.size
 
         # piece format: (block index, start position, length)
-        start_block = offset / self.metadata.block_size
-        end_block = (offset + size - 1) / self.metadata.block_size
-        start_block_pos = offset - (start_block * self.metadata.block_size)
-        end_block_pos = (offset + size) - (end_block * self.metadata.block_size)
+        start_block = offset / self._metadata.block_size
+        end_block = (offset + size - 1) / self._metadata.block_size
+        start_block_pos = offset - (start_block * self._metadata.block_size)
+        end_block_pos = (offset + size) - (end_block * self._metadata.block_size)
         pieces = []
         if start_block == end_block:
             pieces.append((start_block,
@@ -81,7 +75,7 @@ class UKAIData(object):
                 if block == start_block:
                     pieces.append((block,
                                    start_block_pos,
-                                   self.metadata.block_size - start_block_pos))
+                                   self._metadata.block_size - start_block_pos))
                 elif block == end_block:
                     pieces.append((block,
                                    0,
@@ -89,7 +83,7 @@ class UKAIData(object):
                 else:
                     pieces.append((block,
                                    0,
-                                   self.metadata.block_size))
+                                   self._metadata.block_size))
         return (pieces)
 
     def _is_local_node(self, node):
@@ -117,7 +111,13 @@ class UKAIData(object):
         '''
         assert size > 0
         assert offset >= 0
-        assert (offset + size) <= self.metadata.size
+
+        if offset > self._metadata.size:
+            # end of the file.
+            return (0)
+        if offset + size > self._metadata.size:
+            # shorten the size not to overread the end of the file.
+            size = self._metadata.size - offset
 
         data = ''
         pieces = self._gather_pieces(offset, size)
@@ -125,20 +125,46 @@ class UKAIData(object):
             blk_idx = piece[0]
             off_in_blk = piece[1]
             size_in_blk = piece[2]
-            block = self.metadata.blocks[blk_idx]
-            candidate = None
-            for node in block.keys():
-                if block[node]['synced'] is False:
-                    continue
-                if self._is_local_node(node):
-                    candidate = node
+            block = self._metadata.blocks[blk_idx]
+            data_read = False
+            while not data_read:
+                candidate = self._find_read_candidate(block)
+                if candidate is None:
+                    print 'XXX fatal.  should raise an exception.'
+                try:
+                    partial_data = self._get_data(candidate,
+                                                  blk_idx,
+                                                  off_in_blk,
+                                                  size_in_blk)
+                    data_read = True
                     break
-                candidate = node
-            data = data + self._get_data(candidate,
-                                         blk_idx,
-                                         off_in_blk,
-                                         size_in_blk)
+                except (IOError, xmlrpclib.Error), e:
+                    print e.__class__
+                    block[candidate]['synced'] = False
+                    self._metadata.flush()
+                    self._node_error_state_set.add(candidate, 0)
+                    # try to find another candidate node.
+                    continue
+            if data_read is False:
+                # no node is available to get the peice of data.
+                print 'XXX fatal.  should raise an exception.'
+
+            data = data + partial_data
+
         return (data)
+
+    def _find_read_candidate(self, block):
+        candidate = None
+        for node in block.keys():
+            if self._node_error_state_set.is_in_failure(node) is True:
+                continue
+            if block[node]['synced'] is False:
+                continue
+            if self._is_local_node(node):
+                candidate = node
+                break
+            candidate = node
+        return (candidate)
 
     def _get_data(self, node, blk_idx, off_in_blk, size_in_blk):
         '''
@@ -153,7 +179,7 @@ class UKAIData(object):
         '''
         assert size_in_blk > 0
         assert off_in_blk >= 0
-        assert (off_in_blk + size_in_blk) <= self.metadata.block_size
+        assert (off_in_blk + size_in_blk) <= self._metadata.block_size
 
         if self._is_local_node(node):
             return (self._get_data_local(node,
@@ -177,7 +203,7 @@ class UKAIData(object):
         size: the length of the data to be read.
         '''
         path = '%s/%s/' % (UKAIConfig['image_root'],
-                           self.metadata.name)
+                           self._metadata.name)
         path = path + UKAIConfig['blockname_format'] % blk_idx
         fh = open(path, 'r')
         fh.seek(off_in_blk)
@@ -201,8 +227,8 @@ class UKAIData(object):
         remote = xmlrpclib.ServerProxy('http://%s:%d/' %
                                        (node,
                                         UKAIConfig['proxy_port']))
-        return (remote.read(self.metadata.name,
-                            self.metadata.block_size,
+        return (remote.read(self._metadata.name,
+                            self._metadata.block_size,
                             blk_idx,
                             off_in_blk,
                             size_in_blk).data)
@@ -215,7 +241,7 @@ class UKAIData(object):
         '''
         assert data is not None
         assert offset >= 0
-        assert (offset + len(data)) <= self.metadata.size
+        assert (offset + len(data)) <= self._metadata.size
 
         pieces = self._gather_pieces(offset, len(data))
         data_offset = 0
@@ -223,14 +249,23 @@ class UKAIData(object):
             blk_idx = piece[0]
             off_in_blk = piece[1]
             size_in_blk = piece[2]
-            block = self.metadata.blocks[blk_idx]
+            block = self._metadata.blocks[blk_idx]
             for node in block.keys():
-                if block[node]['synced'] is False:
-                    self._synchronize_block(blk_idx)
-                self._put_data(node,
-                               blk_idx,
-                               off_in_blk,
-                               data[data_offset:data_offset + size_in_blk])
+                try:
+                    if self._node_error_state_set.is_in_failure(node) is True:
+                        continue
+                    if block[node]['synced'] is False:
+                        self._synchronize_block(node, blk_idx)
+                    self._put_data(node,
+                                   blk_idx,
+                                   off_in_blk,
+                                   data[data_offset:data_offset
+                                        + size_in_blk])
+                except (IOError, xmlrpclib.Error), e:
+                    print e.__class__
+                    block[node]['synced'] = False
+                    self._metadata.flush()
+                    self._node_error_state_set.add(node, 0)
             data_offset = data_offset + size_in_blk
 
         return (len(data))
@@ -247,7 +282,7 @@ class UKAIData(object):
         data: the data to be written.
         '''
         assert off_in_blk >= 0
-        assert (off_in_blk + len(data)) <= self.metadata.block_size
+        assert (off_in_blk + len(data)) <= self._metadata.block_size
 
         if self._is_local_node(node):
             return (self._put_data_local(node,
@@ -271,7 +306,7 @@ class UKAIData(object):
         data: the data to be written.
         '''
         path = '%s/%s/' % (UKAIConfig['image_root'],
-                           self.metadata.name)
+                           self._metadata.name)
         path = path + UKAIConfig['blockname_format'] % blk_idx
         fh = open(path, 'r+')
         fh.seek(off_in_blk)
@@ -293,46 +328,43 @@ class UKAIData(object):
         remote = xmlrpclib.ServerProxy('http://%s:%d/' %
                                        (node,
                                         UKAIConfig['proxy_port']))
-        return (remote.write(self.metadata.name,
-                             self.metadata.block_size,
+        return (remote.write(self._metadata.name,
+                             self._metadata.block_size,
                              blk_idx,
                              off_in_blk,
                              xmlrpclib.Binary(data)))
 
-    def _synchronize_block(self, blk_idx):
+    def _synchronize_block(self, node, blk_idx):
         '''
         Synchronizes the specified block by the blk_idx argument.
         This function first search the already synchronized node block
         and copy the data to all the other not-synchronized nodes.
         '''
-        block = self.metadata.blocks[blk_idx]
-        source_candidate = None
-        for node in block.keys():
-            if block[node]['synced'] is False:
+        block = self._metadata.blocks[blk_idx]
+        final_candidate = None
+        for candidate in block.keys():
+            if block[candidate]['synced'] is False:
                 continue
-            if self._is_local_node(node):
-                source_candidate = node
+            if self._is_local_node(candidate):
+                final_candidate = candidate
                 break
-            source_candidate = node
-        if source_candidate == None:
+            final_candidate = candidate
+        if final_candidate == None:
             # XXX fatal
             # should raise an exception
-            print 'Disk broken'
-        for node in block.keys():
-            if block[node]['synced'] == True:
-                continue
-            if node == source_candidate:
-                continue
-            self._allocate_dataspace(node, blk_idx)
-            self._put_data(node,
-                           blk_idx,
-                           0,
-                           self._get_data(source_candidate,
-                                          blk_idx,
-                                          0,
-                                          self.metadata.block_size))
-            block[node]['synced'] = True
-        self.metadata.flush()
+            print 'Disk image of %s has unrecoverble error.' % self._metadata.name
+
+        self._allocate_dataspace(node, blk_idx)
+        data = self._get_data(final_candidate,
+                              blk_idx,
+                              0,
+                              self._metadata.block_size)
+        self._put_data(node,
+                       blk_idx,
+                       0,
+                       data)
+        block[node]['synced'] = True
+        self._metadata.flush()
 
     def _allocate_dataspace(self, node, blk_idx):
         '''
@@ -341,18 +373,18 @@ class UKAIData(object):
         '''
         if self._is_local_node(node):
             path = '%s/%s/' % (UKAIConfig['image_root'],
-                           self.metadata.name)
+                           self._metadata.name)
             path = path + UKAIConfig['blockname_format'] % blk_idx
             fh = open(path, 'w')
-            fh.seek(self.metadata.block_size - 1)
+            fh.seek(self._metadata.block_size - 1)
             fh.write('\0')
             fh.close()
         else:
             remote = xmlrpclib.ServerProxy('http://%s:%d/' %
                                            (node,
                                             UKAIConfig['proxy_port']))
-            remote.allocate_dataspace(self.metadata.name,
-                                      self.metadata.block_size,
+            remote.allocate_dataspace(self._metadata.name,
+                                      self._metadata.block_size,
                                       blk_idx)
 
 if __name__ == '__main__':

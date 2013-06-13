@@ -28,17 +28,20 @@ from ukai_config import UKAIConfig
 from ukai_metadata import UKAIMetadata
 from ukai_data import UKAIData
 
-def UKAIControlWorker(metadata_set, data_set):
+def UKAIControlWorker(metadata_set, data_set, node_error_state_set):
     server = SimpleXMLRPCServer(('localhost',
                                  UKAIConfig['control_port']),
                                 logRequests=False)
-    server.register_instance(UKAIControl(metadata_set, data_set))
+    server.register_instance(UKAIControl(metadata_set,
+                                         data_set,
+                                         node_error_state_set))
     server.serve_forever()
 
 class UKAIControl(object):
-    def __init__(self, metadata_set, data_set):
+    def __init__(self, metadata_set, data_set, node_error_state_set):
         self._metadata_set = metadata_set
         self._data_set = data_set
+        self._node_error_state_set = node_error_state_set
 
     def add_image(self, image_name):
         if image_name in self._metadata_set:
@@ -46,7 +49,8 @@ class UKAIControl(object):
         metadata_path = '%s/%s' % (UKAIConfig['metadata_root'], image_name)
         metadata = UKAIMetadata(metadata_path)
         self._metadata_set[image_name] = metadata
-        self._data_set[image_name] = UKAIData(metadata)
+        self._data_set[image_name] = UKAIData(metadata,
+                                              self._node_error_state_set)
         return (0)
 
     def remove_image(self, image_name):
@@ -61,3 +65,6 @@ class UKAIControl(object):
             return ('')
         metadata = self._metadata_set[image_name]
         return(json.dumps(metadata.metadata))
+
+    def get_node_error_state_set(self):
+        return(self._node_error_state_set.get_list())
