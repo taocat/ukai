@@ -120,6 +120,7 @@ class UKAIData(object):
             size = self._metadata.size - offset
 
         data = ''
+        partial_data = ''
         pieces = self._gather_pieces(offset, size)
         for piece in pieces:
             blk_idx = piece[0]
