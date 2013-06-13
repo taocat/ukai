@@ -1,0 +1,101 @@
+# UKAI: The Centrally Controllable Distributed Local Storage
+
+## Copyright Notice
+
+Copyright 2013 IIJ Innovation Institute Inc. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in the
+  documentation and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY IIJ INNOVATION INSTITUTE INC. ``AS IS'' AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL IIJ INNOVATION INSTITUTE INC. OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+## Introduction
+
+UKAI is an implementation of the concept of 'Centrally Controllable
+Distributed Local Storage' as a virtual machine disk image storage.
+UKAI provides a filesystem interface to a hypervisor.  A hypervisor
+use the files stored in the UKAI filesystem as a virtual machine disk
+image file.  The UKAI filesystem is not a POSIX filesystem.  It only
+provides limited but enough set of filesystem operations for virtual
+machine disk image storage.
+
+The UKAI filesystem is a kind of distributed storage system.  Unlike
+other major distributed file/storage systems, the UKAI filesystem is
+not *autonomous* distributed system.  It is fully manual controlled
+distributed filesystem.  You must configure which file should be
+stored on which node.  In other words, you have full control on data
+placement/replacement which is sometimes important when naive
+management is required.
+
+For example, assuming that you have geographically distributed
+datacenters for virtualization services.  In that case, you may want
+to migrate a virtual machie from a hypervisor to a different
+hypervisor which is located far place geographically.  The disk image
+of the virtual machine must be accessible from any location, but
+probably you want some locallity for better disk I/O performance.
+Using the UKAI filesystem, you can collect your virtual machine disk
+image data to UKAI storage nodes located near to the running virtual
+machine.
+
+
+## Installation
+
+UKAI is a Python program built on top of the [FUSE][] mechanism.  The
+following software modules are required to run the UKAI filesystem.
+
+* [Python][]: You know.
+* [FUSE][]: Filesystem in Userspace.
+* [fusepy][]: A Python module that provides a imple interface to FUSE.
+* [netifaces][]: A portable access to network interfaces from Python.
+
+In some environment, you may need to join the 'fuse' group and may
+need to configure the '/etc/fuse.conf' file to include the following
+line to disclose the filesystem to other users than the user running
+the UKAI filesystem.
+
+	user_allow_other
+
+
+## Configuration
+
+Before running the UKAI filesystem, you need to check the
+'ukai_config.py' file and setup appropriate parameters defined in the
+file.  The following parameters are configurable.
+
+* image_root: The path where virtual machine disk image data is
+  stored.
+* metadata_root: The path where the metadata information of
+  disk images is located.
+* blockname_format: The filename format of each piece of blocks.
+* proxy_port: The port number of the proxy program when receiving
+  read/write requests from remote UKAI nodes.
+
+
+## Prepare Disk Images
+
+
+
+
+__________________________________________________________
+[Python]: http://www.python.org/
+[FUSE]: http://fuse.sourceforge.net
+  "FUSE: Filesystem in Userspace"
+[fusepy]: https://github.com/terencehonles/fusepy
+[netifaces]: http://alastairs-place.net/projects/netifaces/
