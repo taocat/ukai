@@ -76,17 +76,17 @@ the UKAI filesystem.
 ## Configuration
 
 Before running the UKAI filesystem, you need to check the
-'ukai_config.py' file and setup appropriate parameters defined in the
+`ukai_config.py` file and setup appropriate parameters defined in the
 file.  The following parameters are configurable.
 
-* image_root: The path where virtual machine disk image data is
+* `image_root`: The path where virtual machine disk image data is
   stored.
-* metadata_root: The path where the metadata information of
+* `metadata_root`: The path where the metadata information of
   disk images is located.
-* blockname_format: The filename format of each piece of blocks.
-* control_port: The port number of the contorl interface to get/set
+* `blockname_format`: The filename format of each piece of blocks.
+* `control_port`: The port number of the contorl interface to get/set
   internal information of the UKAI filesystem.
-* proxy_port: The port number of the proxy program when receiving
+* `proxy_port`: The port number of the proxy program when receiving
   read/write requests from remote UKAI nodes.
 
 
@@ -124,24 +124,25 @@ The metadata is represented in a JSON format like below.
         ]
     }
 
-The 'name' value is a name of the disk image.  The 'size' value is the
+The `name` key is a name of the disk image.  The `size` key is the
 total size of the disk image.  In the above example, 8GB disk is
-defined.  The 'block_size' value is the size of a block.  The disk
-image will be divided into pieces of files based on the 'block_size'
-value.  'blocks' is a list of location information of each block.
-Each block can have multiple UKAI remote sotrage endpoint.  The
-'synced' flag is declare if the data is up-to-date or not.
+defined.  The `block_size` key is the size of a block.  The disk image
+will be divided into pieces of files based on the value of the
+`block_size` key.  The `blocks` key is a list of location information
+of each block.  Each block can have multiple UKAI remote sotrage
+endpoint.  The 'synced' flag is shows the status if the data is
+up-to-date or not.
 
 ### Prepare a Disk Image Files
 
 Once you've created the metadata file, put it to the
-UKAIConfig['metadata_root'] path.
+`UKAIConfig['metadata_root']` path.
 
 You also need to prepare initial disk image files as defined in the
 metadata file.  In the above example, you have to prepare 160 files
-under the UKAIConfig['image_root']/image01/ path of 192.168.0.100.
-The filename of each block is defiend by
-UKAIConfig['blockname_format'], defaults to '%016d'.  The block file
+under the `UKAIConfig['image_root']/image01/` path of the
+`192.168.0.100` node.  The filename of each block is defiend by
+`UKAIConfig['blockname_format']`, defaults to `%016d`.  The block file
 can have any contents since at the beginning, the contents doesn't
 have any meaning.  You may create the files like below.
 
@@ -154,7 +155,7 @@ have any meaning.  You may create the files like below.
 ## Start the UKAI filesystem
 
 To start the UKAI filesystem, you call the main function of the
-'ukai.py' with the path to mount the filesystem.
+`ukai.py` with the path to mount the filesystem.
 
     $ python ukai.py /ukai
 
@@ -164,8 +165,39 @@ defined in metadata files of your disk images.
 
 ## Insert a Disk Image
 
+Initially, there is no disk image attached to the UKAI filesystem.  To
+add the disk image (which you've prepared with a metadata file and
+image data file), follow the instruction below.
+
+    $ python
+    >>> import xmlrpclib
+    >>> s = xmlrpclib.ServerProxy('http://127.0.0.1:22221')
+    >>> s.add_image('image01')
+    >>> exit()
+
+The port number of the XML-RPC server is the value defined as the
+`UKAIConfig['control_port']` value.  The image name used with the
+`add_image` method is the name of the disk image you defined in your
+metadata file.
+
+We will prepare friendlier control command in the future.
+
+Once you complete the above process, you will see that your image is
+added under the UKAI mount point.
 
 
+## Using as a Disk Image
+
+The image file can be used directly as a disk image file.  The
+following is an example of the libvirt style disk definition.
+
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='raw'/>
+      <source file='/ukai/image01'/>
+      <target dev='vda' bus='virtio'/>
+      <alias name='virtio-disk0'/>
+      <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
+    </disk>
 
 __________________________________________________________
 [Python]: http://www.python.org/
