@@ -1,4 +1,4 @@
-# UKAI: The Centrally Controllable Distributed Local Storage
+# UKAI: A Centrally Controllable Distributed Local Storage for a Virtual Machine Disk Image Storage
 
 ## Copyright Notice
 
@@ -31,25 +31,26 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 UKAI is an implementation of the concept of 'Centrally Controllable
 Distributed Local Storage' as a virtual machine disk image storage.
 UKAI provides a filesystem interface to a hypervisor.  A hypervisor
-use the files stored in the UKAI filesystem as a virtual machine disk
-image file.  The UKAI filesystem is not a POSIX filesystem.  It only
-provides limited but enough set of filesystem operations for virtual
-machine disk image storage.
+uses the files stored in the UKAI filesystem as a virtual machine disk
+image files.  The UKAI filesystem is not a POSIX filesystem.  It only
+provides limited (but enough) set of filesystem operations to a
+hypervisor for a virtual machine disk image operation.
 
-The UKAI filesystem is a kind of distributed storage system.  Unlike
-other major distributed file/storage systems, the UKAI filesystem is
-not *autonomous* distributed system.  It is fully manual controlled
+UKAI is a kind of distributed storage system.  Unlike other major
+distributed file/storage systems, the UKAI filesystem is *NOT* an
+*AUTONOMOUS* distributed system.  It is a fully manual controlled
 distributed filesystem.  You must configure which file should be
-stored on which node.  In other words, you have full control on data
-placement/replacement which is sometimes important when naive
+stored on which storage node.  In other words, you have full control
+on data placement/replacement which is sometimes important when naive
 management is required.
 
 For example, assuming that you have geographically distributed
 datacenters for virtualization services.  In that case, you may want
-to migrate a virtual machie from a hypervisor to a different
+to migrate a virtual machie from one hypervisor to a different
 hypervisor which is located far place geographically.  The disk image
 of the virtual machine must be accessible from any location, but
-probably you want some locallity for better disk I/O performance.
+probably you want some locallity to achieve better disk I/O
+performance, or to avoid network access failure to a remote storage.
 Using the UKAI filesystem, you can collect your virtual machine disk
 image data to UKAI storage nodes located near to the running virtual
 machine.
@@ -60,15 +61,17 @@ machine.
 UKAI is a Python program built on top of the [FUSE][] mechanism.  The
 following software modules are required to run the UKAI filesystem.
 
-* [Python][]: You know.
-* [FUSE][]: Filesystem in Userspace.
-* [fusepy][]: A Python module that provides a imple interface to FUSE.
-* [netifaces][]: A portable access to network interfaces from Python.
+* [Python][python]: You know.
+* [FUSE][fuse]: Filesystem in Userspace.
+* [fusepy][fusepy]: A Python module that provides a simple interface
+  to FUSE.
+* [netifaces][netifaces]: A portable library to access network
+  interfaces from Python.
 
-In some environment, you may need to join the 'fuse' group and may
-need to configure the '/etc/fuse.conf' file to include the following
-line to disclose the filesystem to other users than the user running
-the UKAI filesystem.
+In some environment (e.g. Ubuntu), you may need to join the 'fuse'
+group and may need to configure the '/etc/fuse.conf' file to include
+the following line to disclose the filesystem to other users than the
+user running the UKAI filesystem.
 
     user_allow_other
 
@@ -79,10 +82,10 @@ Before running the UKAI filesystem, you need to check the
 `ukai_config.py` file and setup appropriate parameters defined in the
 file.  The following parameters are configurable.
 
-* `image_root`: The path where virtual machine disk image data is
-  stored.
 * `metadata_root`: The path where the metadata information of
   disk images is located.
+* `data_root`: The path where virtual machine disk image data is
+  stored.
 * `blockname_format`: The filename format of each piece of blocks.
 * `control_port`: The port number of the contorl interface to get/set
   internal information of the UKAI filesystem.
@@ -130,8 +133,8 @@ defined.  The `block_size` key is the size of a block.  The disk image
 will be divided into pieces of files based on the value of the
 `block_size` key.  The `blocks` key is a list of location information
 of each block.  Each block can have multiple UKAI remote sotrage
-endpoint.  The 'synced' flag is shows the status if the data is
-up-to-date or not.
+endpoint.  The 'synced' flag shows the status if the block data of the
+node is up-to-date or not.
 
 ### Prepare a Disk Image Files
 
@@ -140,7 +143,7 @@ Once you've created the metadata file, put it to the
 
 You also need to prepare initial disk image files as defined in the
 metadata file.  In the above example, you have to prepare 160 files
-under the `UKAIConfig['image_root']/image01/` path of the
+under the `UKAIConfig['data_root']/image01/` path of the
 `192.168.0.100` node.  The filename of each block is defiend by
 `UKAIConfig['blockname_format']`, defaults to `%016d`.  The block file
 can have any contents since at the beginning, the contents doesn't
@@ -159,6 +162,9 @@ To start the UKAI filesystem, you call the main function of the
 
     $ python ukai.py /ukai
 
+You have to create a mount point (`/ukai` in the above example) before
+mounting the UKAI filesystem.
+
 You also need to run the same program under every UKAI remote nodes
 defined in metadata files of your disk images.
 
@@ -167,7 +173,7 @@ defined in metadata files of your disk images.
 
 Initially, there is no disk image attached to the UKAI filesystem.  To
 add the disk image (which you've prepared with a metadata file and
-image data file), follow the instruction below.
+image data files), follow the instruction below.
 
     $ python
     >>> import xmlrpclib
@@ -200,8 +206,11 @@ following is an example of the libvirt style disk definition.
     </disk>
 
 __________________________________________________________
-[Python]: http://www.python.org/
-[FUSE]: http://fuse.sourceforge.net
+[python]: http://www.python.org/
+  "Python Programming Language"
+[fuse]: http://fuse.sourceforge.net
   "FUSE: Filesystem in Userspace"
 [fusepy]: https://github.com/terencehonles/fusepy
+  "A Python module that provides a simple interface to FUSE and MacFUSE"
 [netifaces]: http://alastairs-place.net/projects/netifaces/
+  "Portable access to network interfaces from Python"
