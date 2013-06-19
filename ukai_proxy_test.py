@@ -3,7 +3,7 @@ import xmlrpclib
 from ukai_config import UKAIConfig
 from ukai_metadata import UKAIMetadata
 
-UKAIConfig['image_root'] = './test/local/images'
+UKAIConfig['data_root'] = './test/local/images'
 UKAIConfig['metadata_root'] = './test/local/meta'
 
 meta = UKAIMetadata('./test/local/meta/test')

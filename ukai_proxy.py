@@ -55,7 +55,7 @@ class UKAIProxy(object):
             block.
         size: the length to be read from the specified block.
         '''
-        path = '%s/%s/' % (UKAIConfig['image_root'],
+        path = '%s/%s/' % (UKAIConfig['data_root'],
                            name)
         path = path + UKAIConfig['blockname_format'] % blk_idx
         fh = open(path, 'r')
@@ -78,7 +78,7 @@ class UKAIProxy(object):
         bin_data: the XML RPC Binary encoded data to be written.
         '''
         data = bin_data.data
-        path = '%s/%s/' % (UKAIConfig['image_root'],
+        path = '%s/%s/' % (UKAIConfig['data_root'],
                            name)
         path = path + UKAIConfig['blockname_format'] % blk_idx
         if not os.path.exists(path):
@@ -96,7 +96,7 @@ class UKAIProxy(object):
         Allocates an empty data block in a local store specified by
         the blk_idx argument.
         '''
-        path = '%s/%s/' % (UKAIConfig['image_root'],
+        path = '%s/%s/' % (UKAIConfig['data_root'],
                            name)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -110,7 +110,7 @@ class UKAIProxy(object):
 if __name__ == '__main__':
     import sys
     if len(sys.argv) == 2 and sys.argv[1] == 'test':
-        UKAIConfig['image_root'] = './test/remote/images'
+        UKAIConfig['data_root'] = './test/remote/images'
         UKAIConfig['metadata_root'] = './test/remote/meta'
         print UKAIConfig
 

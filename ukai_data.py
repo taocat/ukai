@@ -203,7 +203,7 @@ class UKAIData(object):
             block.
         size: the length of the data to be read.
         '''
-        path = '%s/%s/' % (UKAIConfig['image_root'],
+        path = '%s/%s/' % (UKAIConfig['data_root'],
                            self._metadata.name)
         path = path + UKAIConfig['blockname_format'] % blk_idx
         fh = open(path, 'r')
@@ -306,7 +306,7 @@ class UKAIData(object):
             block.
         data: the data to be written.
         '''
-        path = '%s/%s/' % (UKAIConfig['image_root'],
+        path = '%s/%s/' % (UKAIConfig['data_root'],
                            self._metadata.name)
         path = path + UKAIConfig['blockname_format'] % blk_idx
         fh = open(path, 'r+')
@@ -373,7 +373,7 @@ class UKAIData(object):
         the blk_idx argument.
         '''
         if self._is_local_node(node):
-            path = '%s/%s/' % (UKAIConfig['image_root'],
+            path = '%s/%s/' % (UKAIConfig['data_root'],
                            self._metadata.name)
             path = path + UKAIConfig['blockname_format'] % blk_idx
             fh = open(path, 'w')
@@ -389,7 +389,7 @@ class UKAIData(object):
                                       blk_idx)
 
 if __name__ == '__main__':
-    UKAIConfig['image_root'] = './test/local/images'
+    UKAIConfig['data_root'] = './test/local/images'
     UKAIConfig['metadata_root'] = './test/local/meta'
 
     meta = UKAIMetadata('./test/local/meta/test')

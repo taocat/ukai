@@ -187,7 +187,7 @@ class UKAIMetadata(object):
             del block[node]
 
 if __name__ == '__main__':
-    UKAIConfig['image_root'] = './test/local/images'
+    UKAIConfig['data_root'] = './test/local/images'
     UKAIConfig['metadata_root'] = './test/local/meta'
     meta = UKAIMetadata('./test/local/meta/test')
     print 'metadata:', meta._metadata
