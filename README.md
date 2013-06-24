@@ -1,3 +1,5 @@
+![UKAI Logo](ukai_logo.png)
+
 # UKAI: A Centrally Controllable Distributed Local Storage for a Virtual Machine Disk Image Storage
 
 ## Copyright Notice
