@@ -26,6 +26,7 @@ import json
 
 from ukai_config import UKAIConfig
 from ukai_metadata import UKAIMetadata
+from ukai_metadata import UKAI_IN_SYNC, UKAI_SYNCING, UKAI_OUT_OF_SYNC
 from ukai_data import UKAIData
 
 def UKAIControlWorker(metadata_set, data_set, node_error_state_set):
@@ -68,3 +69,18 @@ class UKAIControl(object):
 
     def get_node_error_state_set(self):
         return(self._node_error_state_set.get_list())
+
+    def synchronize(self, image_name, start_index=0, end_index=-1, verbose=False):
+        if image_name not in self._metadata_set:
+            return (-1)
+        metadata = self._metadata_set[image_name]
+        data = self._data_set[image_name]
+        if end_index == -1:
+            end_index = (metadata.size / metadata.block_size) - 1
+        for blk_idx in range(start_index, end_index + 1):
+            if verbose is True:
+                print 'syncing block %d (from %d to %d)' % (blk_idx, start_index, end_index)
+            data.synchronize_block(blk_idx)
+
+        return (0)
+            

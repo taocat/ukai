@@ -110,8 +110,8 @@ class UKAIProxy(object):
 if __name__ == '__main__':
     import sys
     if len(sys.argv) == 2 and sys.argv[1] == 'test':
-        UKAIConfig['data_root'] = './test/remote/images'
-        UKAIConfig['metadata_root'] = './test/remote/meta'
+        UKAIConfig['data_root'] = './test/remote/data'
+        UKAIConfig['metadata_root'] = './test/remote/metadata'
         print UKAIConfig
 
     server = SimpleXMLRPCServer(('', UKAIConfig['proxy_port']),

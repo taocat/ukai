@@ -30,6 +30,10 @@ import json
 
 from ukai_config import UKAIConfig
 
+UKAI_IN_SYNC = 0
+UKAI_SYNCING = 1
+UKAI_OUT_OF_SYNC = 2
+
 def UKAIMetadataCreate(metadata_file, name, size, block_size, node):
     '''
     Create a metadata file.
@@ -55,7 +59,7 @@ def UKAIMetadataCreate(metadata_file, name, size, block_size, node):
     blocks = metadata_raw['blocks']
     print block_count
     for block_num in range(0, block_count):
-        node_entry = {node: {'synced': True}}
+        node_entry = {node: {'sync_status': UKAI_IN_SYNC}}
         blocks.append(node_entry)
 
     fh = open(metadata_file, 'w')
@@ -133,7 +137,18 @@ class UKAIMetadata(object):
         '''
         return(self._metadata['blocks'])
 
-    def add_remote(self, node, start_block=0, end_block=-1, sync_status=False):
+    def set_sync_status(self, block_node, sync_status):
+        assert (sync_status == UKAI_IN_SYNC
+                or sync_status == UKAI_SYNCING
+                or sync_status == UKAI_OUT_OF_SYNC)
+
+        block_node['sync_status'] = sync_status
+
+    def get_sync_status(self, block_node):
+        return (block_node['sync_status'])
+
+    def add_remote(self, node, start_block=0, end_block=-1,
+                   sync_status=UKAI_OUT_OF_SYNC):
         '''
         Adds a node entry to the current blocks.
 
@@ -145,16 +160,16 @@ class UKAIMetadata(object):
         sync_status: the initial synchronized status.
         '''
         if end_block == -1:
-            end_block = self.size / self.block_size
+            end_block = (self.size / self.block_size) - 1
         assert start_block <= end_block
 
-        for block_num in range(start_block, end_block):
-            block = self.blocks[block_num]
+        for blk_idx in range(start_block, end_block + 1):
+            block = self.blocks[blk_idx]
             if node in block:
                 # the specified node is already listed in this block.
                 continue
             block[node] = {}
-            block[node]['synced'] = sync_status
+            self.set_sync_status(block[node], sync_status)
 
     def remove_remote(self, node, start_block=0, end_block=-1):
         '''
@@ -167,29 +182,29 @@ class UKAIMetadata(object):
             of the block array.
         '''
         if end_block == -1:
-            end_block = self.size / self.block_size
+            end_block = (self.size / self.block_size) - 1
         assert start_block <= end_block
 
         can_be_removed = True
-        for block_num in range(start_block, end_block):
-            block = self.blocks[block_num]
+        for blk_idx in range(start_block, end_block + 1):
+            block = self.blocks[blk_idx]
             has_synced_node = False
             for member_node in block.keys():
                 if member_node == node:
                     continue
-                if block[member_node]['synced'] is True:
+                if self.get_sync_status(block[member_node]) == UKAI_IN_SYNC:
                     has_synced_node = True
                     break
             if has_synced_node is False:
-                print 'block %d does not have synced block' % block_num
+                print 'block %d does not have synced block' % blk_idx
                 can_be_removed = False
                 break
             del block[node]
 
 if __name__ == '__main__':
-    UKAIConfig['data_root'] = './test/local/images'
-    UKAIConfig['metadata_root'] = './test/local/meta'
-    meta = UKAIMetadata('./test/local/meta/test')
+    UKAIConfig['data_root'] = './test/local/data'
+    UKAIConfig['metadata_root'] = './test/local/metadata'
+    meta = UKAIMetadata('./test/local/metadata/test')
     print 'metadata:', meta._metadata
     print 'name:', meta.name
     print 'size:', meta.size
@@ -200,12 +215,12 @@ if __name__ == '__main__':
     for block in meta.blocks:
         for node in block.keys():
             if node == '192.168.100.100':
-                block[node]['synced'] = False
+                meta.set_sync_status(block[node], UKAI_OUT_OF_SYNC)
     meta.flush()
     for block in meta.blocks:
         for node in block.keys():
             if node == '192.168.100.100':
-                block[node]['synced'] = True
+                meta.set_sync_status(block[node], UKAI_IN_SYNC)
     meta.flush()
 
     meta.add_remote('192.168.100.101')
