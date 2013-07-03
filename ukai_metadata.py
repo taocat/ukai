@@ -25,6 +25,7 @@ The ukai_metadata.py module defines classes and functions to handle
 metadata information of the UKAI system.
 '''
 
+import threading
 import sys
 import json
 
@@ -57,7 +58,6 @@ def UKAIMetadataCreate(metadata_file, name, size, block_size, node):
     metadata_raw['block_size'] = block_size
     metadata_raw['blocks'] = []
     blocks = metadata_raw['blocks']
-    print block_count
     for block_num in range(0, block_count):
         node_entry = {node: {'sync_status': UKAI_IN_SYNC}}
         blocks.append(node_entry)
@@ -84,6 +84,9 @@ class UKAIMetadata(object):
         '''
         self._metadata_file = metadata_file
         self.reload()
+        self._lock = []
+        for idx in range(0, len(self.blocks)):
+            self._lock.append(threading.Lock())
 
     def reload(self):
         '''
@@ -98,9 +101,15 @@ class UKAIMetadata(object):
         Writes out the latest metadata information stored in memory
         to the metadata file.
         '''
-        fh = open(self._metadata_file, 'w')
-        json.dump(self._metadata, fh)
-        fh.close()
+        try:
+            self.acquire_lock()
+
+            fh = open(self._metadata_file, 'w')
+            json.dump(self._metadata, fh)
+
+        finally:
+            fh.close()
+            self.release_lock()
 
     @property
     def metadata(self):
@@ -133,73 +142,114 @@ class UKAIMetadata(object):
     @property
     def blocks(self):
         '''
-        An array of all blocks.
+        An array of all blocks.  Need to acquire lock when modifying
+        the contents.
         '''
         return(self._metadata['blocks'])
 
-    def set_sync_status(self, block_node, sync_status):
+    def acquire_lock(self, start_idx=0, end_idx=-1):
+        if end_idx == -1:
+            end_idx = (self.size / self.block_size) - 1
+        assert start_idx >= 0
+        assert end_idx >= start_idx
+        assert end_idx < (self.size / self.block_size)
+
+        for blk_idx in range(0, end_idx + 1):
+            self._lock[blk_idx].acquire()
+
+    def release_lock(self, start_idx=0, end_idx=-1):
+        if end_idx == -1:
+            end_idx = (self.size / self.block_size) - 1
+        assert start_idx >= 0
+        assert end_idx >= start_idx
+        assert end_idx < (self.size / self.block_size)
+
+        for blk_idx in range(0, end_idx + 1):
+            self._lock[blk_idx].release()
+
+    def set_sync_status(self, blk_idx, node, sync_status):
         assert (sync_status == UKAI_IN_SYNC
                 or sync_status == UKAI_SYNCING
                 or sync_status == UKAI_OUT_OF_SYNC)
 
-        block_node['sync_status'] = sync_status
+        self.blocks[blk_idx][node]['sync_status'] = sync_status
 
-    def get_sync_status(self, block_node):
-        return (block_node['sync_status'])
+    def get_sync_status(self, blk_idx, node):
+        return (self.blocks[blk_idx][node]['sync_status'])
 
-    def add_remote(self, node, start_block=0, end_block=-1,
-                   sync_status=UKAI_OUT_OF_SYNC):
+    def add_location(self, node, start_idx=0, end_idx=-1,
+                     sync_status=UKAI_OUT_OF_SYNC):
         '''
-        Adds a node entry to the current blocks.
+        Adds location information (a node address) to specified range
+        of blocks.
 
         node: the node (currently IPv4 numeric only) to be added.
-        start_block: the first index of the blocks array to add the node.
-        end_block: the end index of the blocks array to add the node.
+        start_idx: the first index of the blocks array to add the node.
+        end_idx: the end index of the blocks array to add the node.
             When specified -1, the end_block is replaced to the final index
             of the block array.
         sync_status: the initial synchronized status.
         '''
-        if end_block == -1:
-            end_block = (self.size / self.block_size) - 1
-        assert start_block <= end_block
+        if end_idx == -1:
+            end_idx = (self.size / self.block_size) - 1
+        assert start_idx >= 0
+        assert end_idx >= start_idx
+        assert end_idx < (self.size / self.block_size)
 
-        for blk_idx in range(start_block, end_block + 1):
-            block = self.blocks[blk_idx]
-            if node in block:
-                # the specified node is already listed in this block.
-                continue
-            block[node] = {}
-            self.set_sync_status(block[node], sync_status)
+        try:
+            self.acquire_lock(start_idx, end_idx)
 
-    def remove_remote(self, node, start_block=0, end_block=-1):
+            for blk_idx in range(start_idx, end_idx + 1):
+                if node not in self.blocks[blk_idx]:
+                    # if there is no node entry, create it.
+                    self.blocks[blk_idx][node] = {}
+
+                self.set_sync_status(blk_idx, node, sync_status)
+
+        finally:
+            self.release_lock(start_idx, end_idx)
+
+        self.flush()
+
+    def remove_location(self, node, start_idx=0, end_idx=-1):
         '''
-        Removes a node entry from the current blocks.
+        Removes location information (a node address) from specified
+        range of blocks.
 
         node: the node (currently IPv4 numeric only) to be removed.
-        start_block: the first index of the blocks array to add the node.
-        end_block: the end index of the blocks array to add the node.
+        start_idx: the first index of the blocks array to add the node.
+        end_idx: the end index of the blocks array to add the node.
             When specified -1, the end_block is replaced to the final index
             of the block array.
         '''
-        if end_block == -1:
-            end_block = (self.size / self.block_size) - 1
-        assert start_block <= end_block
+        if end_idx == -1:
+            end_idx = (self.size / self.block_size) - 1
+        assert start_idx >= 0
+        assert end_idx >= start_idx
+        assert end_idx < (self.size / self.block_size)
 
-        can_be_removed = True
-        for blk_idx in range(start_block, end_block + 1):
-            block = self.blocks[blk_idx]
-            has_synced_node = False
-            for member_node in block.keys():
-                if member_node == node:
+        try:
+            self.acquire_lock(start_idx, end_idx)
+
+            for blk_idx in range(start_idx, end_idx + 1):
+                block = self.blocks[blk_idx]
+                has_synced_node = False
+                for member_node in block.keys():
+                    if member_node == node:
+                        continue
+                    if (self.get_sync_status(blk_idx, member_node)
+                        == UKAI_IN_SYNC):
+                        has_synced_node = True
+                        break
+                if has_synced_node is False:
+                    print 'block %d does not have synced block' % blk_idx
                     continue
-                if self.get_sync_status(block[member_node]) == UKAI_IN_SYNC:
-                    has_synced_node = True
-                    break
-            if has_synced_node is False:
-                print 'block %d does not have synced block' % blk_idx
-                can_be_removed = False
-                break
-            del block[node]
+                del block[node]
+
+        finally:
+            self.release_lock(start_idx, end_idx)
+
+        self.flush()
 
 if __name__ == '__main__':
     UKAIConfig['data_root'] = './test/local/data'
@@ -212,15 +262,15 @@ if __name__ == '__main__':
     print 'block[0]:', meta.blocks[0]
     print 'block[3]:', meta.blocks[3]
 
-    for block in meta.blocks:
-        for node in block.keys():
+    for blk_idx in range(0, meta.size / meta.block_size):
+        for node in meta.blocks[blk_idx].keys():
             if node == '192.168.100.100':
-                meta.set_sync_status(block[node], UKAI_OUT_OF_SYNC)
+                meta.set_sync_status(blk_idx, node, UKAI_OUT_OF_SYNC)
     meta.flush()
-    for block in meta.blocks:
-        for node in block.keys():
+    for blk_idx in range(0, meta.size / meta.block_size):
+        for node in meta.blocks[blk_idx].keys():
             if node == '192.168.100.100':
-                meta.set_sync_status(block[node], UKAI_IN_SYNC)
+                meta.set_sync_status(blk_idx, node, UKAI_IN_SYNC)
     meta.flush()
 
     meta.add_remote('192.168.100.101')

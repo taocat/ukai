@@ -47,6 +47,7 @@ class UKAIData(object):
         '''
         self._metadata = metadata
         self._node_error_state_set = node_error_state_set
+        self._need_metadata_flush = False
         # Lock objects per block index.
         self._lock = []
         for blk_idx in range(0, len(metadata.blocks)):
@@ -131,6 +132,7 @@ class UKAIData(object):
 
         try:
             for piece in pieces:
+                self._metadata._lock[piece[0]].acquire() # XXX
                 self._lock[piece[0]].acquire()
 
             for piece in pieces:
@@ -140,7 +142,7 @@ class UKAIData(object):
                 block = self._metadata.blocks[blk_idx]
                 data_read = False
                 while not data_read:
-                    candidate = self._find_read_candidate(block)
+                    candidate = self._find_read_candidate(blk_idx)
                     if candidate is None:
                         print 'XXX fatal.  should raise an exception.'
                     try:
@@ -152,9 +154,9 @@ class UKAIData(object):
                         break
                     except (IOError, xmlrpclib.Error), e:
                         print e.__class__
-                        self._metadata.set_sync_status(block[candidate],
+                        self._metadata.set_sync_status(blk_idx, candidate,
                                                        UKAI_OUT_OF_SYNC)
-                        self._metadata.flush()
+                        self._need_metadata_flush = True
                         self._node_error_state_set.add(candidate, 0)
                         # try to find another candidate node.
                         continue
@@ -165,16 +167,21 @@ class UKAIData(object):
                 data = data + partial_data
         finally:
             for piece in pieces:
+                self._metadata._lock[piece[0]].release() # XXX
                 self._lock[piece[0]].release()
+
+        if self._need_metadata_flush is True:
+            self._metadata.flush()
+            self._need_metadata_flush = False
 
         return (data)
 
-    def _find_read_candidate(self, block):
+    def _find_read_candidate(self, blk_idx):
         candidate = None
-        for node in block.keys():
+        for node in self._metadata.blocks[blk_idx].keys():
             if self._node_error_state_set.is_in_failure(node) is True:
                 continue
-            if self._metadata.get_sync_status(block[node]) != UKAI_IN_SYNC:
+            if self._metadata.get_sync_status(blk_idx, node) != UKAI_IN_SYNC:
                 continue
             if self._is_local_node(node):
                 candidate = node
@@ -263,6 +270,7 @@ class UKAIData(object):
         data_offset = 0
         try:
             for piece in pieces:
+                self._metadata._lock[piece[0]].acquire() # XXX
                 self._lock[piece[0]].acquire()
 
             for piece in pieces:
@@ -274,15 +282,15 @@ class UKAIData(object):
                     try:
                         if (self._node_error_state_set.is_in_failure(node)
                             is True):
-                            if (self._metadata.get_sync_status(block[node])
+                            if (self._metadata.get_sync_status(blk_idx, node)
                                 == UKAI_IN_SYNC):
-                                self._metadata.set_sync_status(block[node],
+                                self._metadata.set_sync_status(blk_idx, node,
                                                                UKAI_OUT_OF_SYNC)
-                                self._metadata.flush()
+                                self._need_metadata_flush = True
                             continue
-                        if (self._metadata.get_sync_status(block[node])
+                        if (self._metadata.get_sync_status(blk_idx, node)
                             != UKAI_IN_SYNC):
-                            self._synchronize_block(node, blk_idx)
+                            self._synchronize_block(blk_idx, node)
                         self._put_data(node,
                                        blk_idx,
                                        off_in_blk,
@@ -290,14 +298,19 @@ class UKAIData(object):
                                             + size_in_blk])
                     except (IOError, xmlrpclib.Error), e:
                         print e.__class__
-                        self._metadata.set_sync_status(block[node],
+                        self._metadata.set_sync_status(blk_idx, node,
                                                        UKAI_OUT_OF_SYNC)
-                        self._metadata.flush()
+                        self._need_metadata_flush = True
                         self._node_error_state_set.add(node, 0)
                 data_offset = data_offset + size_in_blk
         finally:
             for piece in pieces:
+                self._metadata._lock[piece[0]].release() # XXX
                 self._lock[piece[0]].release()
+
+        if self._need_metadata_flush is True:
+            self._metadata.flush()
+            self._need_metadata_flush = False
 
         return (len(data))
 
@@ -374,18 +387,19 @@ class UKAIData(object):
         process, and must not be called by any other processes.
         '''
         try:
+            self._metadata._lock[blk_idx].acquire() # XXX
             self._lock[blk_idx].acquire()
 
-            for node in self._metadata.blocks[blk_idx]:
-                block_node = self._metadata.blocks[blk_idx][node]
-                if (self._metadata.get_sync_status(block_node)
+            for node in self._metadata.blocks[blk_idx].keys():
+                if (self._metadata.get_sync_status(blk_idx, node)
                     == UKAI_IN_SYNC):
                     continue
-                self._synchronize_block(node, blk_idx)
+                self._synchronize_block(blk_idx, node)
         finally:
+            self._metadata._lock[blk_idx].release() # XXX
             self._lock[blk_idx].release()
 
-    def _synchronize_block(self, node, blk_idx):
+    def _synchronize_block(self, blk_idx, node):
         '''
         Synchronizes the specified block by the blk_idx argument.
         This function first search the already synchronized node block
@@ -394,7 +408,7 @@ class UKAIData(object):
         block = self._metadata.blocks[blk_idx]
         final_candidate = None
         for candidate in block.keys():
-            if (self._metadata.get_sync_status(block[candidate])
+            if (self._metadata.get_sync_status(blk_idx, candidate)
                 != UKAI_IN_SYNC):
                 continue
             if self._is_local_node(candidate):
@@ -415,8 +429,8 @@ class UKAIData(object):
                        blk_idx,
                        0,
                        data)
-        self._metadata.set_sync_status(block[node], UKAI_IN_SYNC)
-        self._metadata.flush()
+        self._metadata.set_sync_status(blk_idx, node, UKAI_IN_SYNC)
+        self._need_metadata_flush = True
 
     def _allocate_dataspace(self, node, blk_idx):
         '''
