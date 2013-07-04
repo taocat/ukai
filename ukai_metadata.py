@@ -203,8 +203,7 @@ class UKAIMetadata(object):
                 if node not in self.blocks[blk_idx]:
                     # if there is no node entry, create it.
                     self.blocks[blk_idx][node] = {}
-
-                self.set_sync_status(blk_idx, node, sync_status)
+                    self.set_sync_status(blk_idx, node, sync_status)
 
         finally:
             self.release_lock(start_idx, end_idx)
@@ -244,7 +243,8 @@ class UKAIMetadata(object):
                 if has_synced_node is False:
                     print 'block %d does not have synced block' % blk_idx
                     continue
-                del block[node]
+                if node in block.keys():
+                    del block[node]
 
         finally:
             self.release_lock(start_idx, end_idx)
