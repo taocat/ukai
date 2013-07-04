@@ -29,6 +29,7 @@ import threading
 import sys
 import xmlrpclib
 import netifaces
+import zlib
 
 from ukai_metadata import UKAIMetadata
 from ukai_metadata import UKAI_IN_SYNC, UKAI_SYNCING, UKAI_OUT_OF_SYNC
@@ -243,11 +244,11 @@ class UKAIData(object):
         remote = xmlrpclib.ServerProxy('http://%s:%d/' %
                                        (node,
                                         UKAIConfig['proxy_port']))
-        return (remote.read(self._metadata.name,
-                            self._metadata.block_size,
-                            blk_idx,
-                            off_in_blk,
-                            size_in_blk).data)
+        return (zlib.decompress(remote.read(self._metadata.name,
+                                            self._metadata.block_size,
+                                            blk_idx,
+                                            off_in_blk,
+                                            size_in_blk).data))
 
     def write(self, data, offset):
         '''
@@ -363,7 +364,7 @@ class UKAIData(object):
                              self._metadata.block_size,
                              blk_idx,
                              off_in_blk,
-                             xmlrpclib.Binary(data)))
+                             xmlrpclib.Binary(zlib.compress(data))))
 
     def synchronize_block(self, blk_idx):
         '''

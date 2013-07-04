@@ -27,6 +27,7 @@ that runs a virtual machine related to the specific UKAI disk image.
 '''
 
 import os
+import zlib
 import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 
@@ -63,7 +64,7 @@ class UKAIProxy(object):
         data = fh.read(size)
         fh.close()
         assert data is not None
-        return (xmlrpclib.Binary(data))
+        return (xmlrpclib.Binary(zlib.compress(data)))
 
     def write(self, name, blk_size, blk_idx, offset, bin_data):
         '''
@@ -77,7 +78,7 @@ class UKAIProxy(object):
             block.
         bin_data: the XML RPC Binary encoded data to be written.
         '''
-        data = bin_data.data
+        data = zlib.decompress(bin_data.data)
         path = '%s/%s/' % (UKAIConfig['data_root'],
                            name)
         path = path + UKAIConfig['blockname_format'] % blk_idx
