@@ -71,21 +71,22 @@ class UKAIControl(object):
         return(self._node_error_state_set.get_list())
 
 
-    def add_location(self, image_name, location):
+    def add_location(self, image_name, location, start_idx=0, end_idx=-1,
+                     sync_status=UKAI_OUT_OF_SYNC):
         if image_name not in self._metadata_set:
             return (-1)
 
         metadata = self._metadata_set[image_name]
-        metadata.add_location(location)
+        metadata.add_location(location, start_idx, end_idx, sync_status)
 
         return (0)
 
-    def remove_location(self, image_name, location):
+    def remove_location(self, image_name, location, start_idx=0, end_idx=-1):
         if image_name not in self._metadata_set:
             return (-1)
 
         metadata = self._metadata_set[image_name]
-        metadata.remove_location(location)
+        metadata.remove_location(location, start_idx, end_idx)
 
         return (0)
 
