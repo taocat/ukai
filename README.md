@@ -208,14 +208,8 @@ following is an example of the libvirt style disk definition.
 
 ## Note about Migration
 
-When you want to migrate a virtual machine from one hypervisor to
-another hypervisor which is using the UKAI system, you must run
-the UKAI system on both hypervisors, and make sure that the metadata
-of virtual disks are shared between them.
-
-The easiest way to do this is to export a metadata directory using NFS (or some other network file system, such as GlusterFS),
-and share the metadata directory among all the hypervisors.
-
+MIGRATION DOES NOT WORK RIGHT NOW.
+WILL BE FIXED SOON.
 
 ## Utility Commands
 
