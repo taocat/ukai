@@ -116,13 +116,13 @@ The metadata is represented in a JSON format like below.
         "block_size": 50000000,
         "blocks": [
             {
-                "192.168.0.100": {
-                    "synced": true
+                "192.0.2.100": {
+                    "sync_status": 0
                 }
             },
             {
-                "192.168.0.100": {
-                    "synced": true
+                "192.0.2.100": {
+                    "sync_status": 0
                 }
             }
             (continue 158 times)
@@ -135,8 +135,17 @@ defined.  The `block_size` key is the size of a block.  The disk image
 will be divided into pieces of files based on the value of the
 `block_size` key.  The `blocks` key is a list of location information
 of each block.  Each block can have multiple UKAI remote sotrage
-endpoint.  The 'synced' flag shows the status if the block data of the
-node is up-to-date or not.
+endpoint.  The 'sync_status' value shows the status if the block data
+of the node is in-sync or out-of-sync.  0 means in-sync, and 2 means
+out-of-sync.
+
+A metadata file can be created with the utility command provided as
+`create_metadata.py` in the `commands` subdirectory of the
+distribution.  For example to generate the same metadata as in the
+example above, issue the following command.
+
+    $ PYTHONPATH=${UKAIROOT} python create_metadata.py -s 8000000000 -b 50000000 -n 192.0.2.100 image01
+
 
 ### Prepare a Disk Image Files
 
@@ -146,7 +155,7 @@ Once you've created the metadata file, put it to the
 You also need to prepare initial disk image files as defined in the
 metadata file.  In the above example, you have to prepare 160 files
 under the `UKAIConfig['data_root']/image01/` path of the
-`192.168.0.100` node.  The filename of each block is defiend by
+`192.0.2.100` node.  The filename of each block is defiend by
 `UKAIConfig['blockname_format']`, defaults to `%016d`.  The block file
 can have any contents since at the beginning, the contents doesn't
 have any meaning.  You may create the files like below.
@@ -175,20 +184,9 @@ defined in metadata files of your disk images.
 
 Initially, there is no disk image attached to the UKAI filesystem.  To
 add the disk image (which you've prepared with a metadata file and
-image data files), follow the instruction below.
+image data files), use the `add_image.py` command.
 
-    $ python
-    >>> import xmlrpclib
-    >>> s = xmlrpclib.ServerProxy('http://127.0.0.1:22221')
-    >>> s.add_image('image01')
-    >>> exit()
-
-The port number of the XML-RPC server is the value defined as the
-`UKAIConfig['control_port']` value.  The image name used with the
-`add_image` method is the name of the disk image you defined in your
-metadata file.
-
-We will prepare friendlier control command in the future.
+    $ PYTHONPATH=${UKAIROOT} python add_image.py image01
 
 Once you complete the above process, you will see that your image is
 added under the UKAI mount point.
@@ -206,6 +204,94 @@ following is an example of the libvirt style disk definition.
       <alias name='virtio-disk0'/>
       <address type='pci' domain='0x0000' bus='0x00' slot='0x05' function='0x0'/>
     </disk>
+
+
+## Note about Migration
+
+When you want to migrate a virtual machine from one hypervisor to
+another hypervisor which is using the UKAI system, you must run
+the UKAI system on both hypervisors, and make sure that the metadata
+of virtual disks are shared between them.
+
+The easiest way to do this is to export a metadata directory using NFS (or some other network file system, such as GlusterFS),
+and share the metadata directory among all the hypervisors.
+
+
+## Utility Commands
+
+To shortcut various UKAI operations, some handy commands are provided
+in the `commands` subdirectory.  Most of them need to import UKAI
+classes, you need to make sure that UKAI system files are in your
+`PYTHONPATH`.
+
+### Create a Metadata File
+
+The `create_metadata.py` command generates a metadata file of a
+virtual disk image.  The generated image must be copied to the
+metadata directory specified by the `UKAIConfig['metadata_root']`
+parameter.  The acutal disk block files must also be prepared before
+using the virtual disk.
+
+Once you've copied the metadata file (and completed preparing disk
+block files), use the `add_image.py` command to put the disk online.
+
+    Usage: create_metadata.py -s SIZE -b BLOCK_SIZE -n LOCATION IMAGE_NAME
+
+
+### Add a Disk
+
+The `add_image.py` command adds a virtual disk image defined as a
+metadata file to the running UKAI system.
+
+    Usage: add_image.py IMAGE_NAME
+
+
+### Remove a Disk
+
+The `remove_image.py` command removes a virtual disk image from the
+UKAI system.  Do not remove a disk image which is still used by a
+virtual machine.
+
+    Usage: remove_image.py IMAGE_NAME
+
+
+### Get Disk Information
+
+The `get_diskinfo.py` command displays information of a virtual disk.
+You can view the metadata information (name, size, block_size, and
+location information) of the specified virtual disk.
+
+    Usage: get_diskimage.py IMAGE_NAME
+
+
+### Add Location
+
+The `add_location.py` commands adds a new location to an existing
+virtual disk image.  The initial synchronization status of the new
+location is set to out-of-sync.
+
+    Usage: add_location.py IMAGE_NAME LOCATION
+
+
+### Remove Location
+
+The `remove_location.py` commands removes location information from an
+existing virtual disk image.  If the location is the only location
+that have a in-sync state in a block, then the removal will not
+executed.
+
+    Usage: remove_location.py IMAGE_NAME LOCATION
+
+
+### Error Node List
+
+The `get_error_state.py` command displays the list of nodes which are
+not available.  The list does not mean all the other nodes specified
+in virtual disk images are available.  Some nodes may also be
+unavailable.  When the UKAI system tries to contact them, then they
+will also be listed in the list.
+
+    Usage: get_error_state.py
 
 __________________________________________________________
 [python]: http://www.python.org/
