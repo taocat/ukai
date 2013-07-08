@@ -115,9 +115,8 @@ class UKAIControl(object):
         for blk_idx in range(start_index, end_index + 1):
             if verbose is True:
                 print 'syncing block %d (from %d to %d)' % (blk_idx, start_index, end_index)
-            data.synchronize_block(blk_idx)
-            # XXX need to optimize metadata flush process
-            metadata.flush()
+            if data.synchronize_block(blk_idx) is True:
+                metadata.flush()
 
         return (0)
             
