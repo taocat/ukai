@@ -128,11 +128,15 @@ class UKAIMetadata(object):
             for hv in self.hypervisors:
                 if self._is_local_node(hv):
                     continue
-                remote = xmlrpclib.ServerProxy('http://%s:%d/' %
-                                               (hv,
-                                                UKAIConfig['proxy_port']))
-                remote.update_metadata(self.name,
-                                       xmlrpclib.Binary(zlib.compress(json_metadata)))
+                try:
+                    remote = xmlrpclib.ServerProxy('http://%s:%d/' %
+                                                   (hv,
+                                                    UKAIConfig['proxy_port']))
+                    remote.update_metadata(self.name,
+                                           xmlrpclib.Binary(zlib.compress(json_metadata)))
+                except (IOError, xmlrpclib.Error), e:
+                    print e.__class__
+                    print 'Failed to update metadata at %s.  You cannot migrate a virtual machine to %s' % (hv, hv)
 
         finally:
             fh.close()
