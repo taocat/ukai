@@ -6,7 +6,7 @@ import xmlrpclib
 from ukai_config import UKAIConfig
 
 if len(sys.argv) != 3:
-    print 'Usage: %s image_name location' % sys.argv[0]
+    print 'Usage: %s IMAGE_NAME LOCATION' % sys.argv[0]
     exit (-1)
 
 image_name = sys.argv[1]

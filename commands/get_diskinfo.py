@@ -7,7 +7,7 @@ import json
 from ukai_config import UKAIConfig
 
 if len(sys.argv) != 2:
-    print 'Usage: %s image_name' % sys.argv[0]
+    print 'Usage: %s IMAGE_NAME' % sys.argv[0]
     exit (-1)
 
 image_name = sys.argv[1]
@@ -21,11 +21,17 @@ block_size = metadata['block_size']
 blocks = metadata['blocks']
 
 print '''#
-#  Disk Metadata
+# Disk Metadata
 #
 name=%s
 size=%d
 block_size=%d''' % (name, size, block_size)
+
+print '''#
+# Hypervisors
+#'''
+for hv in metadata['hypervisors']:
+    print hv
 
 location2index = {}
 index2location = []

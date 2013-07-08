@@ -28,6 +28,9 @@ metadata information of the UKAI system.
 import threading
 import sys
 import json
+import netifaces
+import zlib
+import xmlrpclib
 
 from ukai_config import UKAIConfig
 
@@ -35,7 +38,8 @@ UKAI_IN_SYNC = 0
 UKAI_SYNCING = 1
 UKAI_OUT_OF_SYNC = 2
 
-def UKAIMetadataCreate(metadata_file, name, size, block_size, node):
+def UKAIMetadataCreate(metadata_file, name, size, block_size,
+                       hypervisor, location):
     '''
     Create a metadata file.
 
@@ -44,7 +48,9 @@ def UKAIMetadataCreate(metadata_file, name, size, block_size, node):
     size: the total size of the disk image.  The size must be multiple
         of the block_size value.
     block_size: the block size of the disk image.
-    node: the node address (currently IPv4 numeric address only) of
+    hypervisor: the hyprevisor address on which a virtual machine
+        of this disk user runs.
+    location: the node address (currently IPv4 numeric address only) of
         initial data store.
     '''
 
@@ -56,6 +62,8 @@ def UKAIMetadataCreate(metadata_file, name, size, block_size, node):
     metadata_raw['name'] = name
     metadata_raw['size'] = size
     metadata_raw['block_size'] = block_size
+    metadata_raw['hypervisors'] = []
+    metadata_raw['hypervisors'].append(hypervisor)
     metadata_raw['blocks'] = []
     blocks = metadata_raw['blocks']
     for block_num in range(0, block_count):
@@ -83,18 +91,28 @@ class UKAIMetadata(object):
             information.
         '''
         self._metadata_file = metadata_file
-        self.reload()
+        self._metadata = None
+        fh = open(self._metadata_file, 'r')
+        self.load_json_metadata(fh.read())
+        fh.close()
         self._lock = []
         for idx in range(0, len(self.blocks)):
             self._lock.append(threading.Lock())
 
-    def reload(self):
+    def load_json_metadata(self, json_metadata):
         '''
-        Reloads the metadata dump file.
+        Load metadata in JSON format.
         '''
-        fh = open(self._metadata_file, 'r')
-        self._metadata = json.load(fh)
-        fh.close()
+        if self._metadata is not None:
+            try:
+                self.acquire_lock()
+
+                self._metadata = json.loads(json_metadata)
+
+            finally:
+                self.release_lock()
+        else:
+                self._metadata = json.loads(json_metadata)
 
     def flush(self):
         '''
@@ -105,7 +123,16 @@ class UKAIMetadata(object):
             self.acquire_lock()
 
             fh = open(self._metadata_file, 'w')
-            json.dump(self._metadata, fh)
+            json_metadata = json.dumps(self._metadata)
+            fh.write(json_metadata)
+            for hv in self.hypervisors:
+                if self._is_local_node(hv):
+                    continue
+                remote = xmlrpclib.ServerProxy('http://%s:%d/' %
+                                               (hv,
+                                                UKAIConfig['proxy_port']))
+                remote.update_metadata(self.name,
+                                       xmlrpclib.Binary(zlib.compress(json_metadata)))
 
         finally:
             fh.close()
@@ -138,6 +165,13 @@ class UKAIMetadata(object):
         The block size of the disk image.
         '''
         return (int(self._metadata['block_size']))
+
+    @property
+    def hypervisors(self):
+        '''
+        The list of all hypervisors to host this virtual machine.
+        '''
+        return(self._metadata['hypervisors'])
 
     @property
     def blocks(self):
@@ -250,6 +284,33 @@ class UKAIMetadata(object):
             self.release_lock(start_idx, end_idx)
 
         self.flush()
+
+    def add_hypervisor(self, hypervisor):
+        if hypervisor not in self.hypervisors:
+            self.hypervisors.append(hypervisor)
+
+    def remove_hypervisor(self, hypervisor):
+        if hypervisor in self.hypervisors:
+            self.hypervisors.remove(hypervisor)
+
+    def _is_local_node(self, node):
+        '''
+        XXX need to integrate with UKAIData._is_local_node()
+
+        Checks if node is this machine or not.  This function compares
+        the node variable and all the local network interface
+        addresses.
+
+        The node variable must be specified as IPv4 numeric address at
+        this moment.
+        '''
+        for interface in netifaces.interfaces():
+            ifaddresses = netifaces.ifaddresses(interface)
+            for family in ifaddresses.keys():
+                for addr in ifaddresses[family]:
+                    if node == addr['addr']:
+                        return (True)
+        return (False)
 
 if __name__ == '__main__':
     UKAIConfig['data_root'] = './test/local/data'
