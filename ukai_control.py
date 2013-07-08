@@ -71,6 +71,22 @@ class UKAIControl(object):
         return(self._node_error_state_set.get_list())
 
 
+    def add_hypervisor(self, image_name, hypervisor):
+        if image_name not in self._metadata_set:
+            return (-1)
+
+        metadata = self._metadata_set[image_name]
+        metadata.add_hypervisor(hypervisor)
+        return (0)
+
+    def remove_hypervisor(self, image_name, hypervisor):
+        if image_name not in self._metadata_set:
+            return (-1)
+
+        metadata = self._metadata_set[image_name]
+        metadata.remove_hypervisor(hypervisor)
+        return (0)
+
     def add_location(self, image_name, location, start_idx=0, end_idx=-1,
                      sync_status=UKAI_OUT_OF_SYNC):
         if image_name not in self._metadata_set:
@@ -78,7 +94,6 @@ class UKAIControl(object):
 
         metadata = self._metadata_set[image_name]
         metadata.add_location(location, start_idx, end_idx, sync_status)
-
         return (0)
 
     def remove_location(self, image_name, location, start_idx=0, end_idx=-1):
@@ -101,6 +116,8 @@ class UKAIControl(object):
             if verbose is True:
                 print 'syncing block %d (from %d to %d)' % (blk_idx, start_index, end_index)
             data.synchronize_block(blk_idx)
+            # XXX need to optimize metadata flush process
+            metadata.flush()
 
         return (0)
             

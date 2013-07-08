@@ -96,6 +96,8 @@ class UKAIData(object):
 
     def _is_local_node(self, node):
         '''
+        XXX need to integrate with UKAIMetadata._is_local_node()
+
         Checks if node is this machine or not.  This function compares
         the node variable and all the local network interface
         addresses.

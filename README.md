@@ -114,6 +114,9 @@ The metadata is represented in a JSON format like below.
         "name": "image01",
         "size": 8000000000,
         "block_size": 50000000,
+	"hypervisors": [
+	    "192.0.2.100"
+	]
         "blocks": [
             {
                 "192.0.2.100": {
@@ -133,18 +136,21 @@ The `name` key is a name of the disk image.  The `size` key is the
 total size of the disk image.  In the above example, 8GB disk is
 defined.  The `block_size` key is the size of a block.  The disk image
 will be divided into pieces of files based on the value of the
-`block_size` key.  The `blocks` key is a list of location information
-of each block.  Each block can have multiple UKAI remote sotrage
-endpoint.  The 'sync_status' value shows the status if the block data
-of the node is in-sync or out-of-sync.  0 means in-sync, and 2 means
-out-of-sync.
+`block_size` key.  The `hypervisors` key is a list of hypervisors on
+which a virtual machine that uses this disk image runs.  If you are
+planning migration of a virtual machine, you need to list all the
+possible destination hypervisors in this list.  The `blocks` key is a
+list of location information of each block.  Each block can have
+multiple UKAI remote sotrage endpoint.  The 'sync_status' value shows
+the status if the block data of the node is in-sync or out-of-sync.  0
+means in-sync, and 2 means out-of-sync.
 
 A metadata file can be created with the utility command provided as
 `create_metadata.py` in the `commands` subdirectory of the
 distribution.  For example to generate the same metadata as in the
 example above, issue the following command.
 
-    $ PYTHONPATH=${UKAIROOT} python create_metadata.py -s 8000000000 -b 50000000 -n 192.0.2.100 image01
+    $ PYTHONPATH=${UKAIROOT} python create_metadata.py -s 8000000000 -b 50000000 -h 192.0.2.100 -l 192.0.2.100 image01
 
 
 ### Prepare a Disk Image Files
@@ -191,6 +197,12 @@ image data files), use the `add_image.py` command.
 Once you complete the above process, you will see that your image is
 added under the UKAI mount point.
 
+If you are running multiple hypervisors and planning a migration
+operation between them, you must insert the disk image on all the
+hypervisors.  When any updates happens on metadata information, all
+the changes will be disseminated to all the hypervisors listed in the
+`hypervisors` key of the metadata file.
+
 
 ## Using as a Disk Image
 
@@ -208,8 +220,11 @@ following is an example of the libvirt style disk definition.
 
 ## Note about Migration
 
-MIGRATION DOES NOT WORK RIGHT NOW.
-WILL BE FIXED SOON.
+When you want to migrate a virtual machine from one hypervisor to
+another hypervisor which is using the UKAI system, you must run
+the UKAI system on both hypervisors, and insert the same disk image
+on all the hypervisors.
+
 
 ## Utility Commands
 
@@ -258,9 +273,29 @@ location information) of the specified virtual disk.
     Usage: get_diskimage.py IMAGE_NAME
 
 
+### Add Hypervisor
+
+The `add_hypervisor.py` command adds a new hypervisor address to the
+specified virtual disk image.  If you are planning a migration
+operation of a virtual machine, then the destination hypervisor must
+be added using this command.
+
+    Usage: add_hypervisor.py IMAGE_NAME HYPERVISOR
+
+
+### Remove Hypervisor
+
+The `remove_hypervisor.py` command removes a hypervisor address from
+the specified virtual disk image.  If you no longer migrate a virtual
+machine to a certain hypervisor, then you better to remove the address
+from the hypervisor list to reduce metadata synchronization overhead.
+
+    Usage: remove_hypervisor.py IMAGE_NAME HYPERVISOR
+
+
 ### Add Location
 
-The `add_location.py` commands adds a new location to an existing
+The `add_location.py` command adds a new location to an existing
 virtual disk image.  The initial synchronization status of the new
 location is set to out-of-sync.
 
@@ -269,7 +304,7 @@ location is set to out-of-sync.
 
 ### Remove Location
 
-The `remove_location.py` commands removes location information from an
+The `remove_location.py` command removes location information from an
 existing virtual disk image.  If the location is the only location
 that have a in-sync state in a block, then the removal will not
 executed.

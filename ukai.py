@@ -82,7 +82,8 @@ class UKAI(LoggingMixIn, Operations):
         self._ctrl_thread.start()
 
         # launch a proxy request handler.
-        self._proxy_thread = threading.Thread(target=UKAIProxyWorker)
+        self._proxy_thread = threading.Thread(target=UKAIProxyWorker,
+                                              args=(self._metadata_set,))
         self._proxy_thread.start()
 
     def destroy(self, path):

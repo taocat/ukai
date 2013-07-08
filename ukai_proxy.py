@@ -28,21 +28,25 @@ that runs a virtual machine related to the specific UKAI disk image.
 
 import os
 import zlib
+import json
 import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 from ukai_config import UKAIConfig
 
-def UKAIProxyWorker():
+def UKAIProxyWorker(metadata_set):
     server = SimpleXMLRPCServer(('', UKAIConfig['proxy_port']),
                                 logRequests=False)
-    server.register_instance(UKAIProxy())
+    server.register_instance(UKAIProxy(metadata_set))
     server.serve_forever()
 
 class UKAIProxy(object):
     '''
     The UKAIProxy class provides proxy read and write operations.
     '''
+
+    def __init__(self, metadata_set):
+        self._metadata_set = metadata_set
 
     def read(self, name, blk_size, blk_idx, offset, size):
         '''
@@ -107,6 +111,20 @@ class UKAIProxy(object):
         fh.write('\0')
         fh.close()
         return (0)
+
+    def update_metadata(self, name, bin_metadata):
+        json_metadata = zlib.decompress(bin_metadata.data)
+        metadata_path = '%s/%s' % (UKAIConfig['metadata_root'],
+                                    name)
+
+        fh = open(metadata_path, 'w')
+        json.dump(json.loads(json_metadata), fh)
+        fh.close()
+
+        self._metadata_set[name].load_json_metadata(json_metadata)
+
+        return (0)
+
 
 if __name__ == '__main__':
     import sys
