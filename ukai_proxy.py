@@ -33,11 +33,15 @@ import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 from ukai_config import UKAIConfig
+from ukai_metadata import UKAIMetadata
+from ukai_data import UKAIData
 
-def UKAIProxyWorker(metadata_set):
+def UKAIProxyWorker(metadata_set, data_set, node_error_state_set):
     server = SimpleXMLRPCServer(('', UKAIConfig['proxy_port']),
                                 logRequests=False)
-    server.register_instance(UKAIProxy(metadata_set))
+    server.register_instance(UKAIProxy(metadata_set,
+                                       data_set,
+                                       node_error_state_set))
     server.serve_forever()
 
 class UKAIProxy(object):
@@ -45,8 +49,10 @@ class UKAIProxy(object):
     The UKAIProxy class provides proxy read and write operations.
     '''
 
-    def __init__(self, metadata_set):
+    def __init__(self, metadata_set, data_set, node_error_state_set):
         self._metadata_set = metadata_set
+        self._data_set = data_set
+        self._node_error_state_set = node_error_state_set
 
     def read(self, name, blk_size, blk_idx, offset, size):
         '''
@@ -121,7 +127,13 @@ class UKAIProxy(object):
         json.dump(json.loads(json_metadata), fh)
         fh.close()
 
-        self._metadata_set[name].load_json_metadata(json_metadata)
+        if name in self._metadata_set:
+            self._metadata_set[name].load_json_metadata(json_metadata)
+        else:
+            metadata = UKAIMetadata(metadata_path)
+            self._metadata_set[name] = metadata
+            self._data_set[name] = UKAIData(metadata,
+                                            self._node_error_state_set)
 
         return (0)
 
