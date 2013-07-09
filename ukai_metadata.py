@@ -41,17 +41,19 @@ UKAI_OUT_OF_SYNC = 2
 def UKAIMetadataCreate(metadata_file, name, size, block_size,
                        hypervisor, location):
     '''
-    Create a metadata file.
+    The UKAIMetadataCreate function creates a metadata file.
 
-    metadata_file: a filename to be generated.
-    name: the name of the disk image.
-    size: the total size of the disk image.  The size must be multiple
+    metadata_file: A filename to be generated.
+    name: The name of the disk image.
+    size: The total size of the disk image.  The size must be multiple
         of the block_size value.
-    block_size: the block size of the disk image.
-    hypervisor: the hyprevisor address on which a virtual machine
+    block_size: The block size of the disk image.
+    hypervisor: The hyprevisor address on which a virtual machine
         of this disk user runs.
-    location: the node address (currently IPv4 numeric address only) of
+    location: The node address (currently IPv4 numeric address only) of
         initial data store.
+
+    Return values: This function does not return any values.
     '''
 
     if size % block_size:
@@ -89,6 +91,8 @@ class UKAIMetadata(object):
 
         metadata_file: The path to the file containing metadata
             information.
+
+        Return values: This function does not return any values.
         '''
         self._metadata_file = metadata_file
         self._metadata = None
@@ -101,9 +105,16 @@ class UKAIMetadata(object):
 
     def load_json_metadata(self, json_metadata):
         '''
-        Load metadata in JSON format.
+        Update metadata with the specified metadata information
+        encodeed in the JSON format.
         '''
-        if self._metadata is not None:
+        if self._metadata is None:
+            # If this is the first time to load the metadata, just
+            # load it.
+            self._metadata = json.loads(json_metadata)
+        else:
+            # If the instance has metadata already, need to lock
+            # the object to avoid thread confliction.
             try:
                 self.acquire_lock()
 
@@ -111,8 +122,6 @@ class UKAIMetadata(object):
 
             finally:
                 self.release_lock()
-        else:
-                self._metadata = json.loads(json_metadata)
 
     def flush(self):
         '''
@@ -122,11 +131,17 @@ class UKAIMetadata(object):
         try:
             self.acquire_lock()
 
+            # Write out to the local metadata storage.
             fh = open(self._metadata_file, 'w')
             json_metadata = json.dumps(self._metadata)
             fh.write(json_metadata)
+
+            # Send the latest metadata information to all the
+            # hypervisors listed in the hypervisor list of the metadata
+            # information.
             for hv in self.hypervisors:
                 if self._is_local_node(hv):
+                    # Local storage is already updated.
                     continue
                 try:
                     remote = xmlrpclib.ServerProxy('http://%s:%d/' %
@@ -145,7 +160,7 @@ class UKAIMetadata(object):
     @property
     def metadata(self):
         '''
-        A metadata dictionary object.
+        The metadata dictionary object of this instance.
         '''
         return(self._metadata)
 
@@ -186,6 +201,18 @@ class UKAIMetadata(object):
         return(self._metadata['blocks'])
 
     def acquire_lock(self, start_idx=0, end_idx=-1):
+        '''
+        Acquires lock objects of the specified range of metadata
+        blocks of the virtual disk.  If you don't specify any index
+        values, the entire metadata blocks are locked.
+
+        start_idx: The first block index of metadata blocks at which
+            the lock object is aquired.
+        end_idx: The last block index of metadata blocks at which
+            the lock object is aquired.
+
+        Return values: This function does not return any values.
+        '''
         if end_idx == -1:
             end_idx = (self.size / self.block_size) - 1
         assert start_idx >= 0
@@ -196,6 +223,19 @@ class UKAIMetadata(object):
             self._lock[blk_idx].acquire()
 
     def release_lock(self, start_idx=0, end_idx=-1):
+        '''
+        Releases lock objects acquired by the acquire_lock method.  If
+        you don't specify any index values, the entire metadata blocks
+        are released, however if you try to release unlocked block,
+        you will receive an assertion.
+        
+        start_idx: The first block index of metadata blocks at which
+            the lock object is aquired.
+        end_idx: The last block index of metadata blocks at which
+            the lock object is aquired.
+
+        Return values: This function does not return any values.
+        '''
         if end_idx == -1:
             end_idx = (self.size / self.block_size) - 1
         assert start_idx >= 0
@@ -206,6 +246,20 @@ class UKAIMetadata(object):
             self._lock[blk_idx].release()
 
     def set_sync_status(self, blk_idx, node, sync_status):
+        '''
+        Sets the sync_status property of the specidied location of the
+        specified block index.
+
+        blk_idx: The index of a block.
+        node: The location information specified by the IP address
+            of a storage node.
+        sync_status: A new synchronization status
+            UKAI_IN_SYNC: The block is synchronized.
+            UKAI_SYNCING: The block is being synchronized (NOT USED).
+            UKAI_OUT_OF_SYNC: The block is not synchronized.
+
+        Return values: This function does not return any values.
+        '''
         assert (sync_status == UKAI_IN_SYNC
                 or sync_status == UKAI_SYNCING
                 or sync_status == UKAI_OUT_OF_SYNC)
@@ -213,6 +267,19 @@ class UKAIMetadata(object):
         self.blocks[blk_idx][node]['sync_status'] = sync_status
 
     def get_sync_status(self, blk_idx, node):
+        '''
+        Returns the sync_status property of the specified location of
+        the specified block index.
+
+        blk_idx: The index of a block.
+        node: The location information specified by the IP address
+            of a storage node.
+
+        Return values: The following values is returned.
+            UKAI_IN_SYNC: The block is synchronized.
+            UKAI_SYNCING: The block is being synchronized (NOT USED).
+            UKAI_OUT_OF_SYNC: The block is not synchronized.
+        '''
         return (self.blocks[blk_idx][node]['sync_status'])
 
     def add_location(self, node, start_idx=0, end_idx=-1,
@@ -227,6 +294,8 @@ class UKAIMetadata(object):
             When specified -1, the end_block is replaced to the final index
             of the block array.
         sync_status: the initial synchronized status.
+
+        Return values: This function does not return any values.
         '''
         if end_idx == -1:
             end_idx = (self.size / self.block_size) - 1
@@ -258,6 +327,8 @@ class UKAIMetadata(object):
         end_idx: the end index of the blocks array to add the node.
             When specified -1, the end_block is replaced to the final index
             of the block array.
+
+        Return values: This function does not return any values.
         '''
         if end_idx == -1:
             end_idx = (self.size / self.block_size) - 1
@@ -290,12 +361,30 @@ class UKAIMetadata(object):
         self.flush()
 
     def add_hypervisor(self, hypervisor):
+        '''
+        Adds a new hypervisor to the list of hypervisors.
+
+        hypervisor: The IP address of a new hypervisor.
+
+        Return values: This function does not return any values.
+        '''
         if hypervisor not in self.hypervisors:
             self.hypervisors.append(hypervisor)
 
+        self.flush()
+
     def remove_hypervisor(self, hypervisor):
+        '''
+        Removed a hypervisor from the list of hypervisors.
+
+        hypervisor: The IP address of the hypervisor to be removed.
+
+        Return values: This function does not return any values.
+        '''
         if hypervisor in self.hypervisors:
             self.hypervisors.remove(hypervisor)
+
+        self.flush()
 
     def _is_local_node(self, node):
         '''
