@@ -35,6 +35,20 @@ from ukai_metadata import UKAIMetadata
 from ukai_metadata import UKAI_IN_SYNC, UKAI_SYNCING, UKAI_OUT_OF_SYNC
 from ukai_config import UKAIConfig
 
+def UKAIDataCreate(data_root, name, size, block_size, block_count,
+                   blockname_format):
+    import os
+
+    for idx in range(0, block_count):
+        block_path = '%s/%s/' % (data_root, name)
+        if not os.path.exists(block_path):
+            os.makedirs(block_path)
+        block_path = block_path + blockname_format % idx
+        fh = open(block_path, 'w')
+        fh.seek(block_size - 1)
+        fh.write('\0')
+        fh.close()
+
 class UKAIData(object):
     '''
     The UKAIData class provides manipulation functions to modify the

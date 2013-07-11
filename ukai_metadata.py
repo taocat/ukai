@@ -38,7 +38,7 @@ UKAI_IN_SYNC = 0
 UKAI_SYNCING = 1
 UKAI_OUT_OF_SYNC = 2
 
-def UKAIMetadataCreate(metadata_file, name, size, block_size,
+def UKAIMetadataCreate(metadata_root, name, size, block_size,
                        hypervisor, location):
     '''
     The UKAIMetadataCreate function creates a metadata file.
@@ -69,10 +69,10 @@ def UKAIMetadataCreate(metadata_file, name, size, block_size,
     metadata_raw['blocks'] = []
     blocks = metadata_raw['blocks']
     for block_num in range(0, block_count):
-        node_entry = {node: {'sync_status': UKAI_IN_SYNC}}
-        blocks.append(node_entry)
+        location_entry = {location: {'sync_status': UKAI_IN_SYNC}}
+        blocks.append(location_entry)
 
-    fh = open(metadata_file, 'w')
+    fh = open('%s/%s' % (metadata_root, name), 'w')
     json.dump(metadata_raw, fh)
     fh.close()
 
