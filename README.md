@@ -97,16 +97,16 @@ file.  The following parameters are configurable.
 
 ## Prepare a Disk Image
 
-At this moment, there is no handy way to prepare a disk image for the
-UKAI filesystem.  You have to prepare all the necessary pieces by hand.
-
 The things you have to do is the following two.
 
 * Prepare a metadata file for a disk image
 * Prepare files used as a storage space of the disk image
 
+Both can be done with the utility command provided with the UKAI
+package.
 
-### Prepare Metadata
+
+### Prepare a Disk Image
 
 The metadata is represented in a JSON format like below.
 
@@ -114,9 +114,9 @@ The metadata is represented in a JSON format like below.
         "name": "image01",
         "size": 8000000000,
         "block_size": 50000000,
-	"hypervisors": [
-	    "192.0.2.100"
-	]
+        "hypervisors": [
+            "192.0.2.100"
+        ]
         "blocks": [
             {
                 "192.0.2.100": {
@@ -145,31 +145,16 @@ multiple UKAI remote sotrage endpoint.  The 'sync_status' value shows
 the status if the block data of the node is in-sync or out-of-sync.  0
 means in-sync, and 2 means out-of-sync.
 
-A metadata file can be created with the utility command provided as
-`create_metadata.py` in the `commands` subdirectory of the
-distribution.  For example to generate the same metadata as in the
-example above, issue the following command.
+A metadata file can be created as well as its data block files with
+the utility command provided as `create_image.py` in the `commands`
+subdirectory of the distribution.  For example to generate the same
+disk image as in the example above, issue the following command.
 
-    $ PYTHONPATH=${UKAIROOT} python create_metadata.py -s 8000000000 -b 50000000 -h 192.0.2.100 -l 192.0.2.100 image01
+    $ PYTHONPATH=${UKAIROOT} python create_image.py -s 8000000000 -b 50000000 -h 192.0.2.100 -l 192.0.2.100 image01
 
-
-### Prepare a Disk Image Files
-
-Once you've created the metadata file, put it to the
-`UKAIConfig['metadata_root']` path.
-
-You also need to prepare initial disk image files as defined in the
-metadata file.  In the above example, you have to prepare 160 files
-under the `UKAIConfig['data_root']/image01/` path of the
-`192.0.2.100` node.  The filename of each block is defiend by
-`UKAIConfig['blockname_format']`, defaults to `%016d`.  The block file
-can have any contents since at the beginning, the contents doesn't
-have any meaning.  You may create the files like below.
-
-    for idx in `seq 0 159`
-    do
-        dd if=/dev/zero of=`printf %016d ${idx}`
-    done
+The metadata file and data block files will be created at the
+`UKAIConfig['metadata_root']` directory and `UKAIConfig['data_root']`
+directory.
 
 
 ## Start the UKAI filesystem
@@ -221,9 +206,12 @@ following is an example of the libvirt style disk definition.
 ## Note about Migration
 
 When you want to migrate a virtual machine from one hypervisor to
-another hypervisor which is using the UKAI system, you must run
-the UKAI system on both hypervisors, and insert the same disk image
-on all the hypervisors.
+another hypervisor which is using the UKAI system, you must run the
+UKAI system on both hypervisors.  The addresses of hypervisors that
+will host a virtual machine that uses a specific disk image must be
+listed in the `hypervisors` key of the disk image.  The metadata
+information of the disk is disseminated only to the hyprevisors listed
+in the key.
 
 
 ## Utility Commands
@@ -233,21 +221,16 @@ in the `commands` subdirectory.  Most of them need to import UKAI
 classes, you need to make sure that UKAI system files are in your
 `PYTHONPATH`.
 
-### Create a Metadata File
+### Create a Disk Image
 
-The `create_metadata.py` command generates a metadata file of a
-virtual disk image.  The generated image must be copied to the
-metadata directory specified by the `UKAIConfig['metadata_root']`
-parameter.  The acutal disk block files must also be prepared before
-using the virtual disk.
+The `create_image.py` command generates a virtual disk image.  Before
+using this command, you have to configure configuration parameters
+(especially the `metadata_root` and `data_root` parameters) properly.
 
-Once you've copied the metadata file (and completed preparing disk
-block files), use the `add_image.py` command to put the disk online.
-
-    Usage: create_metadata.py -s SIZE -b BLOCK_SIZE -n LOCATION IMAGE_NAME
+    Usage: create_image.py -s SIZE -b BLOCK_SIZE -h HYPERVISOR -l LOCATION IMAGE_NAME
 
 
-### Add a Disk
+### Add a Disk Image
 
 The `add_image.py` command adds a virtual disk image defined as a
 metadata file to the running UKAI system.
@@ -255,7 +238,7 @@ metadata file to the running UKAI system.
     Usage: add_image.py IMAGE_NAME
 
 
-### Remove a Disk
+### Remove a Disk Image
 
 The `remove_image.py` command removes a virtual disk image from the
 UKAI system.  Do not remove a disk image which is still used by a
@@ -273,7 +256,7 @@ location information) of the specified virtual disk.
     Usage: get_diskimage.py IMAGE_NAME
 
 
-### Add Hypervisor
+### Add a Hypervisor
 
 The `add_hypervisor.py` command adds a new hypervisor address to the
 specified virtual disk image.  If you are planning a migration
@@ -283,7 +266,7 @@ be added using this command.
     Usage: add_hypervisor.py IMAGE_NAME HYPERVISOR
 
 
-### Remove Hypervisor
+### Remove a Hypervisor
 
 The `remove_hypervisor.py` command removes a hypervisor address from
 the specified virtual disk image.  If you no longer migrate a virtual
@@ -293,7 +276,7 @@ from the hypervisor list to reduce metadata synchronization overhead.
     Usage: remove_hypervisor.py IMAGE_NAME HYPERVISOR
 
 
-### Add Location
+### Add Location Information
 
 The `add_location.py` command adds a new location to an existing
 virtual disk image.  The initial synchronization status of the new
@@ -302,7 +285,7 @@ location is set to out-of-sync.
     Usage: add_location.py IMAGE_NAME LOCATION
 
 
-### Remove Location
+### Remove Location Information
 
 The `remove_location.py` command removes location information from an
 existing virtual disk image.  If the location is the only location
@@ -312,7 +295,7 @@ executed.
     Usage: remove_location.py IMAGE_NAME LOCATION
 
 
-### Error Node List
+### Get a List of Failure Nodes
 
 The `get_error_state.py` command displays the list of nodes which are
 not available.  The list does not mean all the other nodes specified
