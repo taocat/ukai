@@ -113,10 +113,10 @@ The metadata is represented in a JSON format like below.
     {
         "name": "image01",
         "size": 8000000000,
-        "block_size": 50000000,
+        "block_size": 5000000,
         "hypervisors": [
             "192.0.2.100"
-        ]
+        ],
         "blocks": [
             {
                 "192.0.2.100": {
@@ -128,7 +128,7 @@ The metadata is represented in a JSON format like below.
                     "sync_status": 0
                 }
             }
-            (continue 158 times)
+            (continue 1598 times)
         ]
     }
 
@@ -150,7 +150,7 @@ the utility command provided as `create_image.py` in the `commands`
 subdirectory of the distribution.  For example to generate the same
 disk image as in the example above, issue the following command.
 
-    $ PYTHONPATH=${UKAIROOT} python create_image.py -s 8000000000 -b 50000000 -h 192.0.2.100 -l 192.0.2.100 image01
+    $ PYTHONPATH=${UKAIROOT} python create_image.py -s 8000000000 -b 5000000 -h 192.0.2.100 -l 192.0.2.100 image01
 
 The metadata file and data block files will be created at the
 `UKAIConfig['metadata_root']` directory and `UKAIConfig['data_root']`
