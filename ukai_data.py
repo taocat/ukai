@@ -25,6 +25,7 @@ The ukai_data.py module defines classes and functions to handle image
 data of the UKAI system.
 '''
 
+import os
 import threading
 import sys
 import xmlrpclib
@@ -462,6 +463,8 @@ class UKAIData(object):
         if self._is_local_node(node):
             path = '%s/%s/' % (UKAIConfig['data_root'],
                            self._metadata.name)
+            if not os.path.exists(path):
+                os.makedirs(path)
             path = path + UKAIConfig['blockname_format'] % blk_idx
             fh = open(path, 'w')
             fh.seek(self._metadata.block_size - 1)
