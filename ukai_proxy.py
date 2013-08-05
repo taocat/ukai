@@ -189,7 +189,7 @@ class UKAIProxy(object):
         if name in self._metadata_set:
             self._metadata_set[name].load_json_metadata(json_metadata)
         else:
-            metadata = UKAIMetadata(metadata_path)
+            metadata = UKAIMetadata(metadata_path, self._node_error_state_set)
             self._metadata_set[name] = metadata
             self._data_set[name] = UKAIData(metadata,
                                             self._node_error_state_set)
