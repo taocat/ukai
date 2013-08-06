@@ -92,7 +92,7 @@ class UKAIControl(object):
         if image_name in self._metadata_set:
             return (-1)
         metadata_path = '%s/%s' % (UKAIConfig['metadata_root'], image_name)
-        metadata = UKAIMetadata(metadata_path, self._node_error_state_set)
+        metadata = UKAIMetadata(metadata_path)
         self._metadata_set[image_name] = metadata
         self._data_set[image_name] = UKAIData(metadata,
                                               self._node_error_state_set)
