@@ -25,6 +25,7 @@ The ukai_control.py module provides a contol interface to UKAI system
 operators.
 '''
 
+import SocketServer
 import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 import json
@@ -33,6 +34,9 @@ from ukai_config import UKAIConfig
 from ukai_metadata import UKAIMetadata
 from ukai_metadata import UKAI_IN_SYNC, UKAI_SYNCING, UKAI_OUT_OF_SYNC
 from ukai_data import UKAIData
+
+class AsyncSimpleXMLRPCServer(SocketServer.ThreadingMixIn,
+                              SimpleXMLRPCServer): pass
 
 def UKAIControlWorker(metadata_set, data_set, node_error_state_set):
     '''
@@ -49,9 +53,9 @@ def UKAIControlWorker(metadata_set, data_set, node_error_state_set):
 
     Return values: This function does not return.
     '''
-    server = SimpleXMLRPCServer(('localhost',
-                                 UKAIConfig['control_port']),
-                                logRequests=False)
+    server = AsyncSimpleXMLRPCServer(('localhost',
+                                      UKAIConfig['control_port']),
+                                     logRequests=False)
     server.register_instance(UKAIControl(metadata_set,
                                          data_set,
                                          node_error_state_set))

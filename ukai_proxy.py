@@ -29,12 +29,16 @@ that runs a virtual machine related to the specific UKAI disk image.
 import os
 import zlib
 import json
+import SocketServer
 import xmlrpclib
 from SimpleXMLRPCServer import SimpleXMLRPCServer
 
 from ukai_config import UKAIConfig
 from ukai_metadata import UKAIMetadata
 from ukai_data import UKAIData
+
+class AsyncSimpleXMLRPCServer(SocketServer.ThreadingMixIn,
+                              SimpleXMLRPCServer): pass
 
 def UKAIProxyWorker(metadata_set, data_set, node_error_state_set):
     '''
@@ -50,8 +54,8 @@ def UKAIProxyWorker(metadata_set, data_set, node_error_state_set):
 
     Return values: This function does not return.
     '''
-    server = SimpleXMLRPCServer(('', UKAIConfig['proxy_port']),
-                                logRequests=False)
+    server = AsyncSimpleXMLRPCServer(('', UKAIConfig['proxy_port']),
+                                     logRequests=False)
     server.register_instance(UKAIProxy(metadata_set,
                                        data_set,
                                        node_error_state_set))
