@@ -30,8 +30,9 @@ block_size=%d''' % (name, size, block_size)
 print '''#
 # Hypervisors
 #'''
-for hv in metadata['hypervisors']:
-    print hv
+for hv in metadata['hypervisors'].keys():
+    sync_status = metadata['hypervisors'][hv]['sync_status']
+    print '%s: %s' % (hv, 'Y' if sync_status == 0 else 'N')
 
 location2index = {}
 index2location = []

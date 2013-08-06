@@ -64,8 +64,8 @@ def UKAIMetadataCreate(metadata_root, name, size, block_size,
     metadata_raw['name'] = name
     metadata_raw['size'] = size
     metadata_raw['block_size'] = block_size
-    metadata_raw['hypervisors'] = []
-    metadata_raw['hypervisors'].append(hypervisor)
+    metadata_raw['hypervisors'] = {}
+    metadata_raw['hypervisors'][hypervisor] = {'sync_status': UKAI_IN_SYNC}
     metadata_raw['blocks'] = []
     blocks = metadata_raw['blocks']
     for block_num in range(0, block_count):
@@ -140,7 +140,7 @@ class UKAIMetadata(object):
             # Send the latest metadata information to all the
             # hypervisors listed in the hypervisor list of the metadata
             # information.
-            for hv in self.hypervisors:
+            for hv in self.hypervisors.keys():
                 if self._is_local_node(hv):
                     # Local storage is already updated.
                     continue
@@ -150,9 +150,11 @@ class UKAIMetadata(object):
                                                     UKAIConfig['proxy_port']))
                     remote.update_metadata(self.name,
                                            xmlrpclib.Binary(zlib.compress(json_metadata)))
+                    self._set_hypervisor_sync_status(hv, UKAI_IN_SYNC)
                 except (IOError, xmlrpclib.Error), e:
                     print e.__class__
                     print 'Failed to update metadata at %s.  You cannot migrate a virtual machine to %s' % (hv, hv)
+                    self._set_hypervisor_sync_status(hv, UKAI_OUT_OF_SYNC)
 
         finally:
             fh.close()
@@ -245,6 +247,13 @@ class UKAIMetadata(object):
 
         for blk_idx in range(0, end_idx + 1):
             self._lock[blk_idx].release()
+
+    def _set_hypervisor_sync_status(self, hypervisor, sync_status):
+        assert (sync_status == UKAI_IN_SYNC
+                or sync_status == UKAI_SYNCING
+                or sync_status == UKAI_OUT_OF_SYNC)
+
+        self.hypervisors[hypervisor]['sync_status'] = sync_status
 
     def set_sync_status(self, blk_idx, node, sync_status):
         '''
@@ -369,8 +378,8 @@ class UKAIMetadata(object):
 
         Return values: This function does not return any values.
         '''
-        if hypervisor not in self.hypervisors:
-            self.hypervisors.append(hypervisor)
+        if hypervisor not in self.hypervisors.keys():
+            self.hypervisors[hypervisor] = {'sync_status': UKAI_OUT_OF_SYNC}
 
         self.flush()
 
@@ -382,8 +391,8 @@ class UKAIMetadata(object):
 
         Return values: This function does not return any values.
         '''
-        if hypervisor in self.hypervisors:
-            self.hypervisors.remove(hypervisor)
+        if hypervisor in self.hypervisors.keys():
+            del self.hypervisors[hypervisor]
 
         self.flush()
 
