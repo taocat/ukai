@@ -114,9 +114,11 @@ The metadata is represented in a JSON format like below.
         "name": "image01",
         "size": 8000000000,
         "block_size": 5000000,
-        "hypervisors": [
-            "192.0.2.100"
-        ],
+        "hypervisors": {
+            "192.0.2.100": {
+                "sync_status": 0
+            }
+        },
         "blocks": [
             {
                 "192.0.2.100": {
@@ -295,6 +297,18 @@ executed.
     Usage: remove_location.py IMAGE_NAME LOCATION
 
 
+### Synchronize locations
+
+The `synchronize.py` command synchronizes the out-of-sync data to the
+latest in-sync data.  Since synchronize operation takes some time, you
+can specify the range of blocks to synchronize with parameters.
+
+    Usage: synchronize.py [-s START_BLOCK] [-e END_BLOCK] IMAGE_NAME
+
+If you ommit the `-s` parameter then `0` is assumed.  If you ommit the
+`-e` parameter, then the last block number is automatically specified.
+
+
 ### Get a List of Failure Nodes
 
 The `get_error_state.py` command displays the list of nodes which are
@@ -304,6 +318,14 @@ unavailable.  When the UKAI system tries to contact them, then they
 will also be listed in the list.
 
     Usage: get_error_state.py
+
+
+### Get statistics
+
+The `get_statistics.py` command shows the I/O statistics of a specified
+virtual disk image.
+
+    Usage: get_statistics.py IMAGE_NAME
 
 __________________________________________________________
 [python]: http://www.python.org/
