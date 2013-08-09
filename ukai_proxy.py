@@ -36,6 +36,7 @@ from SimpleXMLRPCServer import SimpleXMLRPCServer
 from ukai_config import UKAIConfig
 from ukai_metadata import UKAIMetadata
 from ukai_data import UKAIData
+from ukai_statistics import UKAIStatistics, UKAIImageStatistics
 
 class AsyncSimpleXMLRPCServer(SocketServer.ThreadingMixIn,
                               SimpleXMLRPCServer): pass
@@ -197,6 +198,7 @@ class UKAIProxy(object):
             self._metadata_set[name] = metadata
             self._data_set[name] = UKAIData(metadata,
                                             self._node_error_state_set)
+            UKAIStatistics[name] = UKAIImageStatistics()
 
         return (0)
 
