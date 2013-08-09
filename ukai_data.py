@@ -35,6 +35,7 @@ import zlib
 from ukai_metadata import UKAIMetadata
 from ukai_metadata import UKAI_IN_SYNC, UKAI_SYNCING, UKAI_OUT_OF_SYNC
 from ukai_config import UKAIConfig
+from ukai_statistics import UKAIStatistics
 
 def UKAIDataCreate(data_root, name, size, block_size, block_count,
                    blockname_format):
@@ -147,7 +148,8 @@ class UKAIData(object):
         partial_data = ''
         metadata_flush_required = False
         pieces = self._gather_pieces(offset, size)
-
+        # read operation statistics.
+        UKAIStatistics[self._metadata.name].read_op(pieces)
         try:
             for piece in pieces:
                 self._metadata._lock[piece[0]].acquire() # XXX
@@ -285,6 +287,8 @@ class UKAIData(object):
 
         metadata_flush_required = False
         pieces = self._gather_pieces(offset, len(data))
+        # write operation statistics.
+        UKAIStatistics[self._metadata.name].write_op(pieces)
         data_offset = 0
         try:
             for piece in pieces:

@@ -42,6 +42,7 @@ from ukai_data import UKAIData
 from ukai_control import UKAIControlWorker
 from ukai_proxy import UKAIProxyWorker
 from ukai_node_error_state import UKAINodeErrorStateSet
+from ukai_statistics import UKAIStatistics
 
 class UKAI(LoggingMixIn, Operations):
     '''
@@ -149,7 +150,13 @@ class UKAI(LoggingMixIn, Operations):
         if not self._exists(image_name):
             raise FuseOSError(errno.ENOENT)
         self._fd += 1
-        return self._fd
+        UKAIStatistics[image_name].descriptor = self._fd
+        return (self._fd)
+
+    def release(self, path, fh):
+        image_name = path[1:]
+        UKAIStatistics[image_name].descriptor = -1
+        return (0)
 
     def read(self, path, size, offset, fh):
         '''
@@ -159,6 +166,7 @@ class UKAI(LoggingMixIn, Operations):
         image_name = path[1:]
         if not self._exists(image_name):
             raise FuseOSError(errno.ENOENT)
+
         image_data = self._data_set[image_name]
         return (image_data.read(size, offset))
 
@@ -236,6 +244,7 @@ class UKAI(LoggingMixIn, Operations):
         image_name = path[1:]
         if not self._exists(image_name):
             raise FuseOSError(errno.ENOENT)
+
         image_data = self._data_set[image_name]
         return (image_data.write(data, offset))
 

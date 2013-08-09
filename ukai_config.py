@@ -36,5 +36,6 @@ UKAIConfig = {
     'data_root': '/var/ukai/data',
     'blockname_format': '%016d',
     'control_port': 22221,
-    'proxy_port': 22222
+    'proxy_port': 22222,
+    # 'block_stats': True,
 }

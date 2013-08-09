@@ -34,6 +34,7 @@ from ukai_config import UKAIConfig
 from ukai_metadata import UKAIMetadata
 from ukai_metadata import UKAI_IN_SYNC, UKAI_SYNCING, UKAI_OUT_OF_SYNC
 from ukai_data import UKAIData
+from ukai_statistics import UKAIStatistics, UKAIImageStatistics
 
 class AsyncSimpleXMLRPCServer(SocketServer.ThreadingMixIn,
                               SimpleXMLRPCServer): pass
@@ -100,6 +101,8 @@ class UKAIControl(object):
         self._metadata_set[image_name] = metadata
         self._data_set[image_name] = UKAIData(metadata,
                                               self._node_error_state_set)
+        UKAIStatistics[image_name] = UKAIImageStatistics()
+
         return (0)
 
     def remove_image(self, image_name):
@@ -293,3 +296,12 @@ class UKAIControl(object):
 
         return (0)
             
+    def get_statistics(self, image_name = ''):
+        if image_name == '':
+            stats = {}
+            for name in UKAIStatistics:
+                stats[name] = UKAIStatistics[name].stats
+        else:
+            stats = UKAIStatistics[image_name].stats
+
+        return (json.dumps(stats))
