@@ -120,6 +120,7 @@ class UKAIControl(object):
             return (-1)
         del self._metadata_set[image_name]
         del self._data_set[image_name]
+        del UKAIStatistics[image_name]
 
         return (0)
 
