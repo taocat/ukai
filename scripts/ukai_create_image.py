@@ -3,9 +3,9 @@
 import sys
 import getopt
 
-from ukai_config import UKAIConfig
-from ukai_metadata import UKAIMetadataCreate
-from ukai_data import UKAIDataCreate
+from ukai.ukai_config import UKAIConfig
+from ukai.ukai_metadata import UKAIMetadataCreate
+from ukai.ukai_data import UKAIDataCreate
 
 if len(sys.argv) == 1:
     print 'Usage: %s -s SIZE -b BLOCK_SIZE -h HYPERVISOR -l LOCATION IMAGE_NAME' % sys.argv[0]

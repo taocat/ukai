@@ -5,7 +5,7 @@ import json
 import sys
 import xmlrpclib
 
-from ukai_config import UKAIConfig
+from ukai.ukai_config import UKAIConfig
 
 if len(sys.argv) == 1:
     print 'Usage: %s [-s START_BLOCK -e END_BLOCK -v] IMAGE_NAME' % sys.argv[0]

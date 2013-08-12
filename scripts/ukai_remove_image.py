@@ -3,7 +3,7 @@
 import sys
 import xmlrpclib
 
-from ukai_config import UKAIConfig
+from ukai.ukai_config import UKAIConfig
 
 if len(sys.argv) != 2:
     print 'Usage: %s IMAGE_NAME' % sys.argv[0]

@@ -3,7 +3,7 @@
 import sys
 import xmlrpclib
 
-from ukai_config import UKAIConfig
+from ukai.ukai_config import UKAIConfig
 
 if len(sys.argv) != 2:
     print 'Usage: %s IMAGE_NAME' % sys.argv[0]
@@ -12,4 +12,4 @@ if len(sys.argv) != 2:
 image_name = sys.argv[1]
 
 c = xmlrpclib.ServerProxy('http://127.0.0.1:%d' % UKAIConfig['control_port'])
-print c.get_statistics(image_name)
+c.add_image(image_name)
