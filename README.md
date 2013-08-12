@@ -259,13 +259,13 @@ virtual machine.
     Usage: ukai_remove_image.py IMAGE_NAME
 
 
-### Get Disk Information
+### Get Image Information
 
-The `get_diskinfo.py` command displays information of a virtual disk.
-You can view the metadata information (name, size, block_size, and
-location information) of the specified virtual disk.
+The `ukai_get_image_info.py` command displays information of a virtual
+disk.  You can view the metadata information (name, size, block_size,
+and location information) of the specified virtual disk.
 
-    Usage: ukai_get_diskimage.py IMAGE_NAME
+    Usage: ukai_get_image_info.py IMAGE_NAME
 
 
 ### Add a Hypervisor
