@@ -173,7 +173,7 @@ directory.
 To start the UKAI filesystem, you call the main function of the
 `ukai.py` with the path to mount the filesystem.
 
-    $ sudo python ${YOUR_PYTHON_3RD_PARTY_DIST_PATH}/ukai/ukai.py /ukai
+    $ sudo python ukai/ukai.py /ukai
 
 You have to create a mount point (`/ukai` in the above example) before
 mounting the UKAI filesystem.

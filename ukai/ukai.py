@@ -255,12 +255,33 @@ class UKAI(LoggingMixIn, Operations):
             return (False)
         return (True)
 
-if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print 'usage: %s <mountpoint>' % sys.argv[0]
-        sys.exit(1)
+def main():
+    import getopt
+
+    if len(sys.argv) < 2:
+        print '''Usage: %s [-fd] MOUNTPOINT
+\t-f: run in foreground.
+\t-d: output debug information.''' % sys.argv[0]
+        sys.exit(-1)
+
+    fuse_foreground = False
+    fuse_debug = False
+    (optlist, args) = getopt.getopt(sys.argv[1:], 'fd')
+    for opt_pair in optlist:
+        if opt_pair[0] == '-f':
+            fuse_foreground = True
+        if opt_pair[0] == '-d':
+            fuse_debug = True
+    mountpoint = args[0]
 
     # for linux users: you may have /etc/fuse.conf in some linux
     # distributions.  in that case you need to add the 'user_allow_other'
     # parameter in the conf file to enable the 'allow_other' fuse option.
-    fuse = FUSE(UKAI(), sys.argv[1], foreground=True, allow_other=True)
+    fuse = FUSE(UKAI(), mountpoint,
+                foreground=fuse_foreground,
+                debug=fuse_debug,
+                allow_other=True)
+
+if __name__ == "__main__":
+    main()
+
