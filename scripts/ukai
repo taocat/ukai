@@ -2,4 +2,4 @@
 
 sitepackages=`/usr/bin/env python -c 'import site; print site.getsitepackages()[0]'`
 
-python ${sitepackages}/ukai/ukai.py $@
+exec /usr/bin/env python ${sitepackages}/ukai/ukai.py $@
