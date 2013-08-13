@@ -170,10 +170,11 @@ directory.
 
 ## Start the UKAI filesystem
 
-To start the UKAI filesystem, you call the main function of the
-`ukai.py` with the path to mount the filesystem.
+To start the UKAI filesystem, you call the `ukai` command installed in
+your local executable directory (e.g. `/usr/local/bin/`) with the path
+to mount the filesystem.
 
-    $ sudo python ukai/ukai.py /ukai
+    $ sudo ukai /ukai
 
 You have to create a mount point (`/ukai` in the above example) before
 mounting the UKAI filesystem.
@@ -186,9 +187,9 @@ defined in metadata files of your disk images.
 
 Initially, there is no disk image attached to the UKAI filesystem.  To
 add the disk image (which you've prepared with a metadata file and
-image data files), use the `add_image.py` command.
+image data files), use the `ukai_add_image` command.
 
-    $ ukai_dd_image.py image01
+    $ ukai_add_image image01
 
 Once you complete the above process, you will see that your image is
 added under the UKAI mount point.
@@ -229,92 +230,91 @@ in the key.
 
 To shortcut various UKAI operations, some handy commands are provided
 in the `scripts` subdirectory, which are installed at your local
-install prefix location.
+executable directory (e.g. `/usr/local/bin/`).
 
 
 ### Create a Disk Image
 
-The `ukai_create_image.py` command generates a virtual disk image.
+The `ukai_create_image` command generates a virtual disk image.
 Before using this command, you have to configure configuration
 parameters (especially the `metadata_root` and `data_root` parameters)
 properly.
 
-    Usage: ukai_create_image.py -s SIZE -b BLOCK_SIZE -h HYPERVISOR -l LOCATION IMAGE_NAME
+    Usage: ukai_create_image -s SIZE -b BLOCK_SIZE -h HYPERVISOR -l LOCATION IMAGE_NAME
 
 
 ### Add a Disk Image
 
-The `ukai_add_image.py` command adds a virtual disk image defined as a
+The `ukai_add_image` command adds a virtual disk image defined as a
 metadata file to the running UKAI system.
 
-    Usage: ukai_add_image.py IMAGE_NAME
+    Usage: ukai_add_image IMAGE_NAME
 
 
 ### Remove a Disk Image
 
-The `ukai_remove_image.py` command removes a virtual disk image from
-the UKAI system.  Do not remove a disk image which is still used by a
+The `ukai_remove_image` command removes a virtual disk image from the
+UKAI system.  Do not remove a disk image which is still used by a
 virtual machine.
 
-    Usage: ukai_remove_image.py IMAGE_NAME
+    Usage: ukai_remove_image IMAGE_NAME
 
 
 ### Get Image Information
 
-The `ukai_get_image_info.py` command displays information of a virtual
+The `ukai_get_image_info` command displays information of a virtual
 disk.  You can view the metadata information (name, size, block_size,
 and location information) of the specified virtual disk.
 
-    Usage: ukai_get_image_info.py IMAGE_NAME
+    Usage: ukai_get_image_info IMAGE_NAME
 
 
 ### Add a Hypervisor
 
-The `ukai_add_hypervisor.py` command adds a new hypervisor address to
-the specified virtual disk image.  If you are planning a migration
+The `ukai_add_hypervisor` command adds a new hypervisor address to the
+specified virtual disk image.  If you are planning a migration
 operation of a virtual machine, then the destination hypervisor must
 be added using this command.
 
-    Usage: ukai_add_hypervisor.py IMAGE_NAME HYPERVISOR
+    Usage: ukai_add_hypervisor IMAGE_NAME HYPERVISOR
 
 
 ### Remove a Hypervisor
 
-The `ukai_remove_hypervisor.py` command removes a hypervisor address
-from the specified virtual disk image.  If you no longer migrate a
-virtual machine to a certain hypervisor, then you better to remove the
-address from the hypervisor list to reduce metadata synchronization
-overhead.
+The `ukai_remove_hypervisor` command removes a hypervisor address from
+the specified virtual disk image.  If you no longer migrate a virtual
+machine to a certain hypervisor, then you better to remove the address
+from the hypervisor list to reduce metadata synchronization overhead.
 
-    Usage: ukai_remove_hypervisor.py IMAGE_NAME HYPERVISOR
+    Usage: ukai_remove_hypervisor IMAGE_NAME HYPERVISOR
 
 
 ### Add Location Information
 
-The `ukai_add_location.py` command adds a new location to an existing
+The `ukai_add_location` command adds a new location to an existing
 virtual disk image.  The initial synchronization status of the new
 location is set to out-of-sync.
 
-    Usage: ukai_add_location.py IMAGE_NAME LOCATION
+    Usage: ukai_add_location IMAGE_NAME LOCATION
 
 
 ### Remove Location Information
 
-The `ukai_remove_location.py` command removes location information
-from an existing virtual disk image.  If the location is the only
-location that have a in-sync state in a block, then the removal will
-not executed.
+The `ukai_remove_location` command removes location information from
+an existing virtual disk image.  If the location is the only location
+that have a in-sync state in a block, then the removal will not
+executed.
 
-    Usage: ukai_remove_location.py IMAGE_NAME LOCATION
+    Usage: ukai_remove_location IMAGE_NAME LOCATION
 
 
 ### Synchronize locations
 
-The `ukai_synchronize.py` command synchronizes the out-of-sync data to
+The `ukai_synchronize` command synchronizes the out-of-sync data to
 the latest in-sync data.  Since synchronize operation takes some time,
 you can specify the range of blocks to synchronize with parameters.
 
-    Usage: ukai_synchronize.py [-s START_BLOCK] [-e END_BLOCK] IMAGE_NAME
+    Usage: ukai_synchronize [-s START_BLOCK] [-e END_BLOCK] IMAGE_NAME
 
 If you ommit the `-s` parameter then `0` is assumed.  If you ommit the
 `-e` parameter, then the last block number is automatically specified.
@@ -322,21 +322,21 @@ If you ommit the `-s` parameter then `0` is assumed.  If you ommit the
 
 ### Get a List of Failure Nodes
 
-The `ukai_get_error_state.py` command displays the list of nodes which
+The `ukai_get_error_state` command displays the list of nodes which
 are not available.  The list does not mean all the other nodes
 specified in virtual disk images are available.  Some nodes may also
 be unavailable.  When the UKAI system tries to contact them, then they
 will also be listed in the list.
 
-    Usage: ukai_get_error_state.py
+    Usage: ukai_get_error_state
 
 
 ### Get statistics
 
-The `ukai_get_statistics.py` command shows the I/O statistics of a
+The `ukai_get_statistics` command shows the I/O statistics of a
 specified virtual disk image.
 
-    Usage: ukai_get_statistics.py IMAGE_NAME
+    Usage: ukai_get_statistics IMAGE_NAME
 
 __________________________________________________________
 [python]: http://www.python.org/
