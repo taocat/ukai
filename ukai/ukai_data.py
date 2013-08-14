@@ -32,10 +32,11 @@ import xmlrpclib
 import netifaces
 import zlib
 
+from ukai_config import UKAIConfig
 from ukai_metadata import UKAIMetadata
 from ukai_metadata import UKAI_IN_SYNC, UKAI_SYNCING, UKAI_OUT_OF_SYNC
-from ukai_config import UKAIConfig
 from ukai_statistics import UKAIStatistics
+from ukai_utils import UKAIIsLocalNode
 
 def UKAIDataCreate(data_root, name, size, block_size, block_count,
                    blockname_format):
@@ -108,25 +109,6 @@ class UKAIData(object):
                                    0,
                                    self._metadata.block_size))
         return (pieces)
-
-    def _is_local_node(self, node):
-        '''
-        XXX need to integrate with UKAIMetadata._is_local_node()
-
-        Checks if node is this machine or not.  This function compares
-        the node variable and all the local network interface
-        addresses.
-
-        The node variable must be specified as IPv4 numeric address at
-        this moment.
-        '''
-        for interface in netifaces.interfaces():
-            ifaddresses = netifaces.ifaddresses(interface)
-            for family in ifaddresses.keys():
-                for addr in ifaddresses[family]:
-                    if node == addr['addr']:
-                        return (True)
-        return (False)
 
     def read(self, size, offset):
         '''
@@ -202,7 +184,7 @@ class UKAIData(object):
                 continue
             if self._metadata.get_sync_status(blk_idx, node) != UKAI_IN_SYNC:
                 continue
-            if self._is_local_node(node):
+            if UKAIIsLocalNode(node):
                 candidate = node
                 break
             candidate = node
@@ -223,7 +205,7 @@ class UKAIData(object):
         assert off_in_blk >= 0
         assert (off_in_blk + size_in_blk) <= self._metadata.block_size
 
-        if self._is_local_node(node):
+        if UKAIIsLocalNode(node):
             return (self._get_data_local(node,
                                          blk_idx,
                                          off_in_blk,
@@ -350,7 +332,7 @@ class UKAIData(object):
         assert off_in_blk >= 0
         assert (off_in_blk + len(data)) <= self._metadata.block_size
 
-        if self._is_local_node(node):
+        if UKAIIsLocalNode(node):
             return (self._put_data_local(node,
                                          blk_idx,
                                          off_in_blk,
@@ -439,7 +421,7 @@ class UKAIData(object):
             if (self._metadata.get_sync_status(blk_idx, candidate)
                 != UKAI_IN_SYNC):
                 continue
-            if self._is_local_node(candidate):
+            if UKAIIsLocalNode(candidate):
                 final_candidate = candidate
                 break
             final_candidate = candidate
@@ -464,7 +446,7 @@ class UKAIData(object):
         Allocates an empty data block in a local store specified by
         the blk_idx argument.
         '''
-        if self._is_local_node(node):
+        if UKAIIsLocalNode(node):
             path = '%s/%s/' % (UKAIConfig['data_root'],
                            self._metadata.name)
             if not os.path.exists(path):

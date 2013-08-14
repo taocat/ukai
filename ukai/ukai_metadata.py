@@ -33,6 +33,7 @@ import zlib
 import xmlrpclib
 
 from ukai_config import UKAIConfig
+from ukai_utils import UKAIIsLocalNode
 
 UKAI_IN_SYNC = 0
 UKAI_SYNCING = 1
@@ -140,7 +141,7 @@ class UKAIMetadata(object):
             # hypervisors listed in the hypervisor list of the metadata
             # information.
             for hv in self.hypervisors.keys():
-                if self._is_local_node(hv):
+                if UKAIIsLocalNode(hv):
                     # Local storage is already updated.
                     continue
                 try:
@@ -394,25 +395,6 @@ class UKAIMetadata(object):
             del self.hypervisors[hypervisor]
 
         self.flush()
-
-    def _is_local_node(self, node):
-        '''
-        XXX need to integrate with UKAIData._is_local_node()
-
-        Checks if node is this machine or not.  This function compares
-        the node variable and all the local network interface
-        addresses.
-
-        The node variable must be specified as IPv4 numeric address at
-        this moment.
-        '''
-        for interface in netifaces.interfaces():
-            ifaddresses = netifaces.ifaddresses(interface)
-            for family in ifaddresses.keys():
-                for addr in ifaddresses[family]:
-                    if node == addr['addr']:
-                        return (True)
-        return (False)
 
 if __name__ == '__main__':
     UKAIConfig['data_root'] = './test/local/data'
