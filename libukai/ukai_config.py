@@ -27,42 +27,45 @@
 # OF SUCH DAMAGE.
 
 '''
-The ukai_utils.py module provides a set of general functions to other
-UKAI modules.
+The ukai_config.py module defines the global parameters of the
+UKAI system.
+
+metadata_root: the location of the backend metadata storage space.
+data_root: the location of the backend image storage space.
+blockname_format: the filename format of each block data.
+proxy_port: the listening port of the UKAI system to receive
+    remote read/write operations.
 '''
 
-import netifaces
-import time
+import json
+import re
 
-from ukai_config import UKAIConfig
+DEFAULT_CONFIG_FILE = '/etc/ukai/config'
 
-UKAIIfaddrCache = {
-    'expiration_time': 0,
-    'cached_addrs': [],
-}
-UKAI_IFADDR_CACHE_VALID_TIME = 1
+comment_re = re.compile('^\s*#.*$', re.MULTILINE)
 
-def UKAIIsLocalNode(node):
-    '''
-    The UKAIIsLocalNode function checks if the node is a local node or
-    not by comparing the passed value and all the addresses assigned
-    to local network interfaces.
-    '''
-    now = time.time()
+class UKAIConfig(object):
+    def __init__(self, config_file=DEFAULT_CONFIG_FILE):
+        config_content = ''
+        with open(config_file) as fp:
+            config_content = ''.join(fp.readlines())
+            match = comment_re.search(config_content)
+            while match:
+                config_content = (config_content[:match.start()]
+                                  + config_content[match.end():])
+                match = comment_re.search(config_content)
+                
+        self._config = json.loads(config_content)
 
-    if (('ifaddr_cache' in UKAIConfig)
-        and (UKAIConfig['ifaddr_cache'] is True)):
-        # ifaddr cache is enabled.
-        if UKAIIfaddrCache['expiration_time'] > now:
-            return (node in UKAIIfaddrCache['cached_addrs'])
+    def get(self, param):
+        if param in self._config:
+            return (self._config[param])
+        else:
+            return (None)
 
-    UKAIIfaddrCache['cached_addrs'] = []
-    for interface in netifaces.interfaces():
-        ifaddresses = netifaces.ifaddresses(interface)
-        for family in ifaddresses.keys():
-            for addr in ifaddresses[family]:
-                UKAIIfaddrCache['cached_addrs'].append(addr['addr'])
-    UKAIIfaddrCache['expiration_time'] = (now
-                                          + UKAI_IFADDR_CACHE_VALID_TIME)
+    def set(self, param, value):
+        self._config[param] = value
 
-    return (node in UKAIIfaddrCache['cached_addrs'])
+if __name__ == '__main__':
+    config = UKAIConfig()
+    print config._config

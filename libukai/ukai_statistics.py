@@ -33,6 +33,8 @@ UKAI disk I/O.
 
 from ukai_config import UKAIConfig
 
+ukai_config = UKAIConfig()
+
 # The unit of I/O histogram.
 UKAI_HISTOGRAM_UNIT = 512
 
@@ -51,8 +53,8 @@ class UKAIImageStatistics(object):
         to True, before creating an instance.
         '''
         self._block_stats_enabled = False
-        if 'block_stats' in UKAIConfig:
-            self._block_stats_enabled = UKAIConfig['block_stats']
+        if ukai_config.get('block_stats') is True:
+            self._block_stats_enabled = True
 
         self._stats = {}
         self._stats['descriptor'] = -1

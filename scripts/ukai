@@ -1,5 +1,0 @@
-#!/bin/sh
-
-sitepackages=`/usr/bin/env python -c 'import site; print site.getsitepackages()[0]'`
-
-exec /usr/bin/env python ${sitepackages}/ukai/ukai.py $@

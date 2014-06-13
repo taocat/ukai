@@ -32,31 +32,20 @@ data of the UKAI system.
 '''
 
 import os
-import threading
 import sys
+import threading
 import xmlrpclib
-import netifaces
 import zlib
 
+import netifaces
+
 from ukai_config import UKAIConfig
+from ukai_local_io import ukai_local_read, ukai_local_write
 from ukai_metadata import UKAIMetadata
 from ukai_metadata import UKAI_IN_SYNC, UKAI_SYNCING, UKAI_OUT_OF_SYNC
 from ukai_statistics import UKAIStatistics
 from ukai_utils import UKAIIsLocalNode
 
-def UKAIDataCreate(data_root, name, size, block_size, block_count,
-                   blockname_format):
-    import os
-
-    for idx in range(0, block_count):
-        block_path = '%s/%s/' % (data_root, name)
-        if not os.path.exists(block_path):
-            os.makedirs(block_path)
-        block_path = block_path + blockname_format % idx
-        fh = open(block_path, 'w')
-        fh.seek(block_size - 1)
-        fh.write('\0')
-        fh.close()
 
 class UKAIData(object):
     '''
@@ -64,13 +53,14 @@ class UKAIData(object):
     disk image contents.
     '''
 
-    def __init__(self, metadata, node_error_state_set):
+    def __init__(self, metadata, node_error_state_set, config):
         '''
         Initializes the instance with the specified metadata object
         created with the UKAIMetadata class.
         '''
         self._metadata = metadata
         self._node_error_state_set = node_error_state_set
+        self._config = config
         # Lock objects per block index.
         self._lock = []
         for blk_idx in range(0, len(metadata.blocks)):
@@ -232,14 +222,10 @@ class UKAIData(object):
             block.
         size: the length of the data to be read.
         '''
-        path = '%s/%s/' % (UKAIConfig['data_root'],
-                           self._metadata.name)
-        path = path + UKAIConfig['blockname_format'] % blk_idx
-        fh = open(path, 'r')
-        fh.seek(off_in_blk)
-        data = fh.read(size_in_blk)
-        fh.close()
-        assert data is not None
+        data = ukai_local_read(self._metadata.name,
+                               self._metadata.block_size,
+                               blk_idx, off_in_blk, size_in_blk,
+                               self._config)
         return (data)
 
     def _get_data_remote(self, node, blk_idx, off_in_blk, size_in_blk):
@@ -256,12 +242,13 @@ class UKAIData(object):
         '''
         remote = xmlrpclib.ServerProxy('http://%s:%d/' %
                                        (node,
-                                        UKAIConfig['proxy_port']))
-        return (zlib.decompress(remote.read(self._metadata.name,
-                                            self._metadata.block_size,
-                                            blk_idx,
-                                            off_in_blk,
-                                            size_in_blk).data))
+                                        self._config.get('core_port')))
+        encoded_data = remote.proxy_read(self._metadata.name,
+                                         self._metadata.block_size,
+                                         blk_idx,
+                                         off_in_blk,
+                                         size_in_blk)
+        return zlib.decompress(encoded_data.data)
 
     def write(self, data, offset):
         '''
@@ -359,14 +346,10 @@ class UKAIData(object):
             block.
         data: the data to be written.
         '''
-        path = '%s/%s/' % (UKAIConfig['data_root'],
-                           self._metadata.name)
-        path = path + UKAIConfig['blockname_format'] % blk_idx
-        fh = open(path, 'r+')
-        fh.seek(off_in_blk)
-        fh.write(data)
-        fh.close()
-        return (len(data))
+        return ukai_local_write(self._metadata.name,
+                                self._metadata.block_size,
+                                blk_idx, off_in_blk, data,
+                                self._config)
 
     def _put_data_remote(self, node, blk_idx, off_in_blk, data):
         '''
@@ -381,12 +364,12 @@ class UKAIData(object):
         '''
         remote = xmlrpclib.ServerProxy('http://%s:%d/' %
                                        (node,
-                                        UKAIConfig['proxy_port']))
-        return (remote.write(self._metadata.name,
-                             self._metadata.block_size,
-                             blk_idx,
-                             off_in_blk,
-                             xmlrpclib.Binary(zlib.compress(data))))
+                                        self._config.get('core_port')))
+        return (remote.proxy_write(self._metadata.name,
+                                   self._metadata.block_size,
+                                   blk_idx,
+                                   off_in_blk,
+                                   xmlrpclib.Binary(zlib.compress(data))))
 
     def synchronize_block(self, blk_idx):
         '''
@@ -453,11 +436,11 @@ class UKAIData(object):
         the blk_idx argument.
         '''
         if UKAIIsLocalNode(node):
-            path = '%s/%s/' % (UKAIConfig['data_root'],
+            path = '%s/%s/' % (self._config.get('data_root'),
                            self._metadata.name)
             if not os.path.exists(path):
                 os.makedirs(path)
-            path = path + UKAIConfig['blockname_format'] % blk_idx
+            path = path + self._config.get('blockname_format') % blk_idx
             fh = open(path, 'w')
             fh.seek(self._metadata.block_size - 1)
             fh.write('\0')
@@ -465,16 +448,16 @@ class UKAIData(object):
         else:
             remote = xmlrpclib.ServerProxy('http://%s:%d/' %
                                            (node,
-                                            UKAIConfig['proxy_port']))
-            remote.allocate_dataspace(self._metadata.name,
-                                      self._metadata.block_size,
-                                      blk_idx)
+                                            self._config.get('core_port')))
+            remote.proxy_allocate_dataspace(self._metadata.name,
+                                            self._metadata.block_size,
+                                            blk_idx)
 
 if __name__ == '__main__':
     from ukai_node_error_state import UKAINodeErrorStateSet
 
-    UKAIConfig['data_root'] = './test/local/data'
-    UKAIConfig['metadata_root'] = './test/local/metadata'
+    ukai_config.set('data_root', './test/local/data')
+    ukai_config.set('metadata_root', './test/local/metadata')
     ness = UKAINodeErrorStateSet()
 
     meta = UKAIMetadata('./test/local/metadata/test')
@@ -508,7 +491,7 @@ if __name__ == '__main__':
     for block_num in range(0, meta.size / meta.block_size):
         print 'sync block_num %d' % block_num
         remote = xmlrpclib.ServerProxy('http://127.0.0.1:%d/' %
-                                       UKAIConfig['proxy_port'])
+                                       ukai_config.get('proxy_port'))
         remote.allocate_dataspace(meta.name,
                                   meta.block_size,
                                   block_num)

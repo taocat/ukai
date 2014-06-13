@@ -27,22 +27,43 @@
 # OF SUCH DAMAGE.
 
 '''
-The ukai_config.py module defines the global parameters of the
-UKAI system.
-
-metadata_root: the location of the backend metadata storage space.
-data_root: the location of the backend image storage space.
-blockname_format: the filename format of each block data.
-proxy_port: the listening port of the UKAI system to receive
-    remote read/write operations.
+The ukai_utils.py module provides a set of general functions to other
+UKAI modules.
 '''
 
-UKAIConfig = {
-    'metadata_root': '/var/ukai/metadata',
-    'data_root': '/var/ukai/data',
-    'blockname_format': '%016d',
-    'control_port': 22221,
-    'proxy_port': 22222,
-    'ifaddr_cache': True,
-    # 'block_stats': True,
+import netifaces
+import time
+
+from ukai_config import UKAIConfig
+
+ukai_config = UKAIConfig()
+
+UKAIIfaddrCache = {
+    'expiration_time': 0,
+    'cached_addrs': [],
 }
+UKAI_IFADDR_CACHE_VALID_TIME = 1
+
+def UKAIIsLocalNode(node):
+    '''
+    The UKAIIsLocalNode function checks if the node is a local node or
+    not by comparing the passed value and all the addresses assigned
+    to local network interfaces.
+    '''
+    now = time.time()
+
+    if (ukai_config.get('ifaddr_cache') is True):
+        # ifaddr cache is enabled.
+        if UKAIIfaddrCache['expiration_time'] > now:
+            return (node in UKAIIfaddrCache['cached_addrs'])
+
+    UKAIIfaddrCache['cached_addrs'] = []
+    for interface in netifaces.interfaces():
+        ifaddresses = netifaces.ifaddresses(interface)
+        for family in ifaddresses.keys():
+            for addr in ifaddresses[family]:
+                UKAIIfaddrCache['cached_addrs'].append(addr['addr'])
+    UKAIIfaddrCache['expiration_time'] = (now
+                                          + UKAI_IFADDR_CACHE_VALID_TIME)
+
+    return (node in UKAIIfaddrCache['cached_addrs'])
