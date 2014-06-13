@@ -45,7 +45,7 @@ UKAI_CONFIG_FILE_DEFAULT = '/etc/ukai/config'
 comment_re = re.compile('^\s*#.*$', re.MULTILINE)
 
 class UKAIConfig(object):
-    def __init__(self, config_file=DEFAULT_CONFIG_FILE):
+    def __init__(self, config_file=UKAI_CONFIG_FILE_DEFAULT):
         config_content = ''
         with open(config_file) as fp:
             config_content = ''.join(fp.readlines())
