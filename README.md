@@ -1,6 +1,6 @@
 ![UKAI Logo](ukai_logo.png)
 
-# UKAI: A Location-Aware Distributed Storage Software for Virtual Machine Disk Images
+# UKAI: A Location Aware Distributed Storage for Virtual Machine Disk Images
 
 ## Copyright Notice
 
@@ -74,6 +74,7 @@ following software modules are required to run the UKAI filesystem.
   to FUSE.
 * [netifaces][netifaces]: A portable library to access network
   interfaces from Python.
+* [Riak][riak]: A distributed distributed database.
 
 In some environment (e.g. Ubuntu), you may need to join the 'fuse'
 group and may need to configure the '/etc/fuse.conf' file to include
@@ -94,35 +95,43 @@ to your local install prefix.
 
 ## Configuration
 
-Before running the UKAI filesystem, you need to check the
-`ukai_config.py` file and setup appropriate parameters defined in the
-file.  The following parameters are configurable.
+Before running the UKAI filesystem, you need to create a config
+file at `/etc/ukai/config`.  The file is a kind of a JSON file.
+The following parameters can be configured.
 
-* `metadata_root`: The path where the metadata information of
-  disk images is located.
+* `metadata_server`: The address of a metadata server that keeps
+  disk metadata information.  You need to prepare a Riak server
+  at this address.
 * `data_root`: The path where virtual machine disk image data is
   stored.
 * `blockname_format`: The filename format of each piece of blocks.
-* `control_port`: The port number of the contorl interface to get/set
-  internal information of the UKAI filesystem.
-* `proxy_port`: The port number of the proxy program when receiving
-  read/write requests from remote UKAI nodes.
+* `core_server`: The address of the UKAI server.
+* `core_port`: The port number of the UKAI server.
+* `create_default`: This is a JSON dictionary key to specify
+  parameters when creating a new disk image.
+  * `block_size`: The default block size of a newly created disk
+    image.
+
+
+## Start the UKAI filesystem
+
+To start the UKAI filesystem, you call the `ukai_server` command
+installed in your local executable directory (e.g. `/usr/local/bin/`).
+You need to run a UKAI server on all the nodes you store your disk
+image data and hypervisors as well.
+
+    $ sudo ukai_server
+
+Next, you need to expose the storage system by mounting the data to a
+directory somewhere by using the `ukai_fuse` command.
+
+    $ sudo ukai_fuse /mnt
 
 
 ## Prepare a Disk Image
 
-The things you have to do is the following two.
-
-* Prepare a metadata file for a disk image
-* Prepare files used as a storage space of the disk image
-
-Both can be done with the utility command provided with the UKAI
-package.
-
-
-### Prepare a Disk Image
-
-The metadata is represented in a JSON format like below.
+The metadata of a disk image is represented in a JSON format like
+below.
 
     {
         "name": "image01",
@@ -161,49 +170,26 @@ multiple UKAI remote sotrage endpoint.  The 'sync_status' value shows
 the status if the block data of the node is in-sync or out-of-sync.  0
 means in-sync, and 2 means out-of-sync.
 
-A metadata file can be created as well as its data block files with
-the utility command provided as `create_image.py` in the `commands`
-subdirectory of the distribution.  For example to generate the same
-disk image as in the example above, issue the following command.
+A metadata file can be created with the `ukai_admin` command.  For
+example, to generate the same disk image as in the example above,
+issue the following command.
 
-    $ sudo ukai_create_image.py -s 8000000000 -b 5000000 -h 192.0.2.100 -l 192.0.2.100 image01
+    $ ukai_admin create_image -s 8000000000 -b 5000000 -h 192.0.2.100 -l 192.0.2.100 image01
 
-The metadata file and data block files will be created at the
-`UKAIConfig['metadata_root']` directory and `UKAIConfig['data_root']`
-directory.
-
-
-## Start the UKAI filesystem
-
-To start the UKAI filesystem, you call the `ukai` command installed in
-your local executable directory (e.g. `/usr/local/bin/`) with the path
-to mount the filesystem.
-
-    $ sudo ukai /ukai
-
-You have to create a mount point (`/ukai` in the above example) before
-mounting the UKAI filesystem.
-
-You also need to run the same program under every UKAI remote nodes
-defined in metadata files of your disk images.
+The metadata information is stored on a metadata server on which you
+specified by the `metadata_server` parameter in the config file.
 
 
 ## Insert a Disk Image
 
-Initially, there is no disk image attached to the UKAI filesystem.  To
-add the disk image (which you've prepared with a metadata file and
-image data files), use the `ukai_add_image` command.
+Initially, there is no disk image attached to the UKAI filesystem.
+You need to add a disk image.  The image metadata must be prepared
+before adding the disk.
 
-    $ ukai_add_image image01
+    $ ukai_admin add_image image01
 
 Once you complete the above process, you will see that your image is
 added under the UKAI mount point.
-
-If you are running multiple hypervisors and planning a migration
-operation between them, you must insert the disk image on all the
-hypervisors.  When any updates happens on metadata information, all
-the changes will be disseminated to all the hypervisors listed in the
-`hypervisors` key of the metadata file.
 
 
 ## Using as a Disk Image
@@ -233,93 +219,90 @@ in the key.
 
 ## Utility Commands
 
-To shortcut various UKAI operations, some handy commands are provided
-in the `scripts` subdirectory, which are installed at your local
-executable directory (e.g. `/usr/local/bin/`).
+To manage UKAI disk images, you need to use the `ukai_admin` command.
+The command has several subcommands based on the type of operations.
 
 
 ### Create a Disk Image
 
-The `ukai_create_image` command generates a virtual disk image.
-Before using this command, you have to configure configuration
-parameters (especially the `metadata_root` and `data_root` parameters)
-properly.
+The `create_image` subcommand generates a virtual disk image.  Before
+using this command, you have to start a UKAI server.
 
-    Usage: ukai_create_image -s SIZE -b BLOCK_SIZE -h HYPERVISOR -l LOCATION IMAGE_NAME
+    Usage: ukai_admin create_image -s SIZE -b BLOCK_SIZE -h HYPERVISOR -l LOCATION IMAGE_NAME
 
 
 ### Add a Disk Image
 
-The `ukai_add_image` command adds a virtual disk image defined as a
+The `add_image` subcommand adds a virtual disk image defined as a
 metadata file to the running UKAI system.
 
-    Usage: ukai_add_image IMAGE_NAME
+    Usage: ukai_admin add_image IMAGE_NAME
 
 
 ### Remove a Disk Image
 
-The `ukai_remove_image` command removes a virtual disk image from the
-UKAI system.  Do not remove a disk image which is still used by a
-virtual machine.
+The `remove_image` command removes a virtual disk image from the UKAI
+system.  Do not remove a disk image which is still used by a virtual
+machine.
 
-    Usage: ukai_remove_image IMAGE_NAME
+    Usage: ukai_admin remove_image IMAGE_NAME
 
 
 ### Get Image Information
 
-The `ukai_get_image_info` command displays information of a virtual
-disk.  You can view the metadata information (name, size, block_size,
-and location information) of the specified virtual disk.
+The `get_image_info` command displays information of a virtual disk.
+You can view the metadata information (name, size, block_size, and
+location information) of the specified virtual disk.
 
-    Usage: ukai_get_image_info IMAGE_NAME
+    Usage: ukai_admin get_image_info IMAGE_NAME
 
 
 ### Add a Hypervisor
 
-The `ukai_add_hypervisor` command adds a new hypervisor address to the
+The `add_hypervisor` subcommand adds a new hypervisor address to the
 specified virtual disk image.  If you are planning a migration
 operation of a virtual machine, then the destination hypervisor must
 be added using this command.
 
-    Usage: ukai_add_hypervisor IMAGE_NAME HYPERVISOR
+    Usage: ukai_admin add_hypervisor IMAGE_NAME HYPERVISOR
 
 
 ### Remove a Hypervisor
 
-The `ukai_remove_hypervisor` command removes a hypervisor address from
+The `remove_hypervisor` subcommand removes a hypervisor address from
 the specified virtual disk image.  If you no longer migrate a virtual
 machine to a certain hypervisor, then you better to remove the address
 from the hypervisor list to reduce metadata synchronization overhead.
 
-    Usage: ukai_remove_hypervisor IMAGE_NAME HYPERVISOR
+    Usage: ukai_admin remove_hypervisor IMAGE_NAME HYPERVISOR
 
 
 ### Add Location Information
 
-The `ukai_add_location` command adds a new location to an existing
+The `add_location` subcommand adds a new location to an existing
 virtual disk image.  The initial synchronization status of the new
 location is set to out-of-sync.
 
-    Usage: ukai_add_location IMAGE_NAME LOCATION
+    Usage: ukai_admin add_location IMAGE_NAME LOCATION
 
 
 ### Remove Location Information
 
-The `ukai_remove_location` command removes location information from
-an existing virtual disk image.  If the location is the only location
+The `remove_location` subcommand removes location information from an
+existing virtual disk image.  If the location is the only location
 that have a in-sync state in a block, then the removal will not
 executed.
 
-    Usage: ukai_remove_location IMAGE_NAME LOCATION
+    Usage: ukai_admin remove_location IMAGE_NAME LOCATION
 
 
 ### Synchronize locations
 
-The `ukai_synchronize` command synchronizes the out-of-sync data to
-the latest in-sync data.  Since synchronize operation takes some time,
-you can specify the range of blocks to synchronize with parameters.
+The `synchronize` subcommand synchronizes the out-of-sync data to the
+latest in-sync data.  Since synchronize operation takes some time, you
+can specify the range of blocks to synchronize with parameters.
 
-    Usage: ukai_synchronize [-s START_BLOCK] [-e END_BLOCK] IMAGE_NAME
+    Usage: ukai_admin synchronize [-s START_BLOCK] [-e END_BLOCK] IMAGE_NAME
 
 If you ommit the `-s` parameter then `0` is assumed.  If you ommit the
 `-e` parameter, then the last block number is automatically specified.
@@ -327,21 +310,21 @@ If you ommit the `-s` parameter then `0` is assumed.  If you ommit the
 
 ### Get a List of Failure Nodes
 
-The `ukai_get_error_state` command displays the list of nodes which
-are not available.  The list does not mean all the other nodes
-specified in virtual disk images are available.  Some nodes may also
-be unavailable.  When the UKAI system tries to contact them, then they
+The `get_error_state` subcommand displays the list of nodes which are
+not available.  The list does not mean all the other nodes specified
+in virtual disk images are available.  Some nodes may also be
+unavailable.  When the UKAI system tries to contact them, then they
 will also be listed in the list.
 
-    Usage: ukai_get_error_state
+    Usage: ukai_admin get_error_state
 
 
 ### Get statistics
 
-The `ukai_get_statistics` command shows the I/O statistics of a
+The `get_statistics` subcommand shows the I/O statistics of a
 specified virtual disk image.
 
-    Usage: ukai_get_statistics IMAGE_NAME
+    Usage: ukai_admin get_statistics IMAGE_NAME
 
 __________________________________________________________
 [python]: http://www.python.org/
@@ -352,3 +335,5 @@ __________________________________________________________
   "A Python module that provides a simple interface to FUSE and MacFUSE"
 [netifaces]: http://alastairs-place.net/projects/netifaces/
   "Portable access to network interfaces from Python"
+[riak]: http://basho.com
+  "Riak: A distributed database system"
