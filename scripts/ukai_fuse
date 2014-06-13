@@ -33,8 +33,7 @@ import sys
 
 from fuse import FUSE
 
-from libukai.ukai_config import UKAIConfig
-from libukai.ukai_core import UKAI_CONFIG_FILE_DEFAULT
+from libukai.ukai_config import UKAIConfig, UKAI_CONFIG_FILE_DEFAULT
 from libukai.ukai_fuse_connector import UKAIFUSE
 
 if __name__ == '__main__':

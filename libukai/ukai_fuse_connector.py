@@ -32,7 +32,6 @@ import sys
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
 
 from ukai_config import UKAIConfig
-from ukai_core import UKAI_CONFIG_FILE_DEFAULT
 from ukai_rpc import UKAIXMLRPCClient, UKAIXMLRPCTranslation
 
 class UKAIFUSE(LoggingMixIn, Operations):

@@ -40,7 +40,7 @@ proxy_port: the listening port of the UKAI system to receive
 import json
 import re
 
-DEFAULT_CONFIG_FILE = '/etc/ukai/config'
+UKAI_CONFIG_FILE_DEFAULT = '/etc/ukai/config'
 
 comment_re = re.compile('^\s*#.*$', re.MULTILINE)
 

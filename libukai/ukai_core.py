@@ -42,8 +42,6 @@ from ukai_node_error_state import UKAINodeErrorStateSet
 from ukai_rpc import UKAIXMLRPCTranslation
 from ukai_statistics import UKAIStatistics, UKAIImageStatistics
 
-UKAI_CONFIG_FILE_DEFAULT = '/etc/ukai/config'
-
 class UKAICore(object):
     ''' UKAI core processing.
     '''
