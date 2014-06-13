@@ -34,7 +34,6 @@ data of the UKAI system.
 import os
 import sys
 import threading
-import xmlrpclib
 import zlib
 
 import netifaces
@@ -43,6 +42,7 @@ from ukai_config import UKAIConfig
 from ukai_local_io import ukai_local_read, ukai_local_write
 from ukai_metadata import UKAIMetadata
 from ukai_metadata import UKAI_IN_SYNC, UKAI_SYNCING, UKAI_OUT_OF_SYNC
+from ukai_rpc import UKAIXMLRPCCall, UKAIXMLRPCTranslation
 from ukai_statistics import UKAIStatistics
 from ukai_utils import UKAIIsLocalNode
 
@@ -61,6 +61,7 @@ class UKAIData(object):
         self._metadata = metadata
         self._node_error_state_set = node_error_state_set
         self._config = config
+        self._rpc_trans = UKAIXMLRPCTranslation()
         # Lock objects per block index.
         self._lock = []
         for blk_idx in range(0, len(metadata.blocks)):
@@ -240,15 +241,15 @@ class UKAIData(object):
             block.
         size: the length of the data to be read.
         '''
-        remote = xmlrpclib.ServerProxy('http://%s:%d/' %
-                                       (node,
-                                        self._config.get('core_port')))
-        encoded_data = remote.proxy_read(self._metadata.name,
-                                         self._metadata.block_size,
-                                         blk_idx,
-                                         off_in_blk,
-                                         size_in_blk)
-        return zlib.decompress(encoded_data.data)
+        rpc_call = UKAIXMLRPCCall(node,
+                                  self._config.get('core_port'))
+        encoded_data = rpc_call.call('proxy_read',
+                                     self._metadata.name,
+                                     self._metadata.block_size,
+                                     blk_idx,
+                                     off_in_blk,
+                                     size_in_blk)
+        return zlib.decompress(self._rpc_trans.decode(encoded_data))
 
     def write(self, data, offset):
         '''
@@ -362,14 +363,13 @@ class UKAIData(object):
             block.
         data: the data to be written.
         '''
-        remote = xmlrpclib.ServerProxy('http://%s:%d/' %
-                                       (node,
-                                        self._config.get('core_port')))
-        return (remote.proxy_write(self._metadata.name,
-                                   self._metadata.block_size,
-                                   blk_idx,
-                                   off_in_blk,
-                                   xmlrpclib.Binary(zlib.compress(data))))
+        rpc_call = UKAIXMLRPCCall(node, self._config.get('core_port'))
+        return rpc_call.call('proxy_write',
+                             self._metadata.name,
+                             self._metadata.block_size,
+                             blk_idx,
+                             off_in_blk,
+                             self._rpc_trans.encode(zlib.compress(data)))
 
     def synchronize_block(self, blk_idx):
         '''
@@ -446,12 +446,12 @@ class UKAIData(object):
             fh.write('\0')
             fh.close()
         else:
-            remote = xmlrpclib.ServerProxy('http://%s:%d/' %
-                                           (node,
-                                            self._config.get('core_port')))
-            remote.proxy_allocate_dataspace(self._metadata.name,
-                                            self._metadata.block_size,
-                                            blk_idx)
+            rpc_call = UKAIXMLRPCCall(
+                node, self._config.get('core_port'))
+            rpc_call.call('proxy_allocate_dataspace',
+                          self._metadata.name,
+                          self._metadata.block_size,
+                          blk_idx)
 
 if __name__ == '__main__':
     from ukai_node_error_state import UKAINodeErrorStateSet

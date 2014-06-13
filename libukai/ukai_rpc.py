@@ -29,11 +29,13 @@
 import xmlrpclib
 
 class UKAIRPCClient(object):
-    def __init__(self):
-        self._client = None
-
     def call(self, method, *params):
-        # must implement something.
+        # must subclass.
+        assert(False)
+
+class UKAIRPCCall(object):
+    def call(self, method, *params):
+        # must subclass.
         assert(False)
 
 class UKAIRPCTranslation(object):
@@ -45,48 +47,27 @@ class UKAIRPCTranslation(object):
 
 class UKAIXMLRPCClient(UKAIRPCClient):
     def __init__(self, config):
-        super(UKAIXMLRPCClient, self).__init__()
         self._config = config
 
     def call(self, method, *params):
-        '''
-            '''
-        fuse_options = self._config.get('fuse_options')
-        if (fuse_options is not None
-            and 'nothreads' in fuse_options
-            and fuse_options['nothreads'] is True):
-            # if the fuse threading is disabled, we can re-use
-            # one rpc connection to issue multiple rpc requests.
-            if self._client is None:
-                self._client = xmlrpclib.ServerProxy(
-                    'http://%s:%d' % (self._config.get('core_server'),
-                                      self._config.get('core_port')),
-                    allow_none=True)
-            try:
-                return getattr(self._client, method)(*params)
-            except xmlrpclib.Error, e:
-                print e.__class__
-                del self._client
-                self._client = None
-                raise
-        else:
-            # if the fuse threading is enabled, we cannot re-use
-            # one rpc connection because multiple rpc requests may
-            # be issued concurrently which is not allowed by the
-            # XMLRPC spec.
-            client = xmlrpclib.ServerProxy(
-                'http://%s:%d' % (self._config.get('core_server'),
-                                  self._config.get('core_port')),
-                allow_none=True)
-            try:
-                return getattr(client, method)(*params)
-            except xmlrpclib.Error, e:
-                print e.__class__
-                del self._client
-                self._client = None
-                raise
-            finally:
-                del client 
+        rpc_call = UKAIXMLRPCCall(self._config.get('core_server'),
+                                  self._config.get('core_port'))
+        return rpc_call.call(method, *params)
+
+class UKAIXMLRPCCall(UKAIRPCCall):
+    def __init__(self, server, port):
+        self._server = server
+        self._port = port
+
+    def call(self, method, *params):
+        client = xmlrpclib.ServerProxy(
+            'http://%s:%d' % (self._server, self._port),
+            allow_none=True)
+        try:
+            return getattr(client, method)(*params)
+        except xmlrpclib.Error, e:
+            print e.__class__
+            raise
 
 class UKAIXMLRPCTranslation(UKAIRPCTranslation):
     def encode(self, source):

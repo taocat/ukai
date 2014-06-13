@@ -36,10 +36,10 @@ import sys
 import json
 import netifaces
 import zlib
-import xmlrpclib
 import riak
 
 from ukai_config import UKAIConfig
+from ukai_rpc import UKAIXMLRPCCall, UKAIXMLRPCTranslation
 from ukai_utils import UKAIIsLocalNode
 
 UKAI_IN_SYNC = 0
@@ -102,6 +102,7 @@ class UKAIMetadata(object):
         Return values: This function does not return any values.
         '''
         self._config = config
+        self._rpc_trans = UKAIXMLRPCTranslation()
         if (metadata_raw != None):
             self._metadata = metadata_raw
         else:
@@ -135,12 +136,12 @@ class UKAIMetadata(object):
                 if UKAIIsLocalNode(hv):
                     continue
                 try:
-                    remote = xmlrpclib.ServerProxy('http://%s:%d/' %
-                                                   (hv,
-                                                    self._config.get('proxy_port')))
                     self._set_hypervisor_sync_status(hv, UKAI_IN_SYNC)
-                    remote.proxy_update_metadata(self.name,
-                                                 xmlrpclib.Binary(zlib.compress(json.dumps(self._metadata))))
+                    rpc_call = UKAIXMLRPCCall(
+                        hv, self._config.get('core_port'))
+                    rpc_call.call('proxy_update_metadata',
+                                  self.name,
+                                  self._rpc_trans.encode(zlib.compress(json.dumps(self._metadata))))
                 except (IOError, xmlrpclib.Error), e:
                     print e.__class__
                     print 'Failed to update metadata at %s.  You cannot migrate a virtual machine to %s' % (hv, hv)
