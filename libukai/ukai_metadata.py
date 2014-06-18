@@ -205,7 +205,6 @@ class UKAIMetadata(object):
     @used_size.setter
     def used_size(self, used_size):
         self._metadata['used_size'] = used_size
-        self.flush()
 
     @property
     def block_size(self):

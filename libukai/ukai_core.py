@@ -130,6 +130,7 @@ class UKAICore(object):
         if image_metadata.size < length:
             return errno.EINVAL
         image_metadata.used_size = length
+        image_metadata.flush()
         return 0
 
     def unlink(self, path):
