@@ -86,7 +86,6 @@ class UKAICore(object):
         return ret, st
 
     def open(self, path, flags):
-        print '%s, %0d (%0x)' % (path, flags ,flags)
         ret = 0
         image_name = path[1:]
         if not self._exists(image_name):
