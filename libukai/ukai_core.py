@@ -56,18 +56,6 @@ class UKAICore(object):
         self._open_for_write_image_set = set()
         self._rpc_trans = UKAIXMLRPCTranslation()
 
-    @property
-    def metadata_server(self):
-        return self._config.get('metadata_server')
-
-    @property
-    def core_server(self):
-        return self._config.get('core_server')
-
-    @property
-    def core_port(self):
-        return self._config.get('core_port')
-
     ''' Filesystem I/O processing.
     '''
     def getattr(self, path):
