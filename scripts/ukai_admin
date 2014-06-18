@@ -86,7 +86,9 @@ class UKAICtl(object):
         return self._rpc_client.call('ctl_create_image', image_name,
                                      size, block_size,
                                      location, hypervisor)
-        
+
+    def destroy_image(self, *params):
+        return self._rpc_client.call('ctl_destroy_image', *params)
 
     def add_image(self, *params):
         if len(params) < 1:

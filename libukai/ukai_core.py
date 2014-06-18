@@ -34,11 +34,12 @@ import sys
 import zlib
 
 from ukai_config import UKAIConfig
-from ukai_data import UKAIData
+from ukai_data import UKAIData, ukai_data_destroy
 from ukai_local_io import ukai_local_read, ukai_local_write
 from ukai_local_io import ukai_local_allocate_dataspace
+from ukai_local_io import ukai_local_destroy_image
 from ukai_metadata import UKAIMetadata, UKAI_OUT_OF_SYNC
-from ukai_metadata import ukai_metadata_create
+from ukai_metadata import ukai_metadata_create, ukai_metadata_destroy
 from ukai_node_error_state import UKAINodeErrorStateSet
 from ukai_rpc import UKAIXMLRPCTranslation
 from ukai_statistics import UKAIStatistics, UKAIImageStatistics
@@ -168,6 +169,10 @@ class UKAICore(object):
         return ukai_local_allocate_dataspace(image_name, block_size,
                                              block_index, self._config)
 
+    def proxy_deallocate_dataspace(self, image_name, block_index):
+        return ukai_local_deallocate_dataspace(image_name, block_index,
+                                               self._config)
+
     def proxy_update_metadata(self, image_name, encoded_metadata):
         metadata_raw = json.loads(zlib.decompress(self._rpc_trans.decode(
                     encoded_metadata)))
@@ -182,6 +187,10 @@ class UKAICore(object):
             UKAIStatistics[image_name] = UKAIImageStatistics()
 
         return 0
+
+    def proxy_destroy_image(self, image_name):
+        return ukai_local_destroy_image(image_name, self._config)
+
 
     ''' Controll processing.
     '''
@@ -205,6 +214,12 @@ class UKAICore(object):
 
         ukai_metadata_create(image_name, size, block_size,
                              location, hypervisor, self._config)
+
+    def ctl_destroy_image(self, image_name):
+        assert image_name is not None
+
+        ukai_data_destroy(image_name, self._config)
+        ukai_metadata_destroy(image_name, self._config)
 
     def ctl_add_image(self, image_name):
         if image_name in self._metadata_dict:

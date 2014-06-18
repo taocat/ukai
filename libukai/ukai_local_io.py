@@ -27,16 +27,21 @@
 # OF SUCH DAMAGE.
 
 import os
+import shutil
 
 def ukai_local_read(image_name, block_size, block_index, offset, size, config):
-    path = '%s/%s/' % (config.get('data_root'), image_name)
-    path = path + config.get('blockname_format') % block_index
-    if ((not os.path.exists(path))
-        or (os.path.getsize(path) != block_size)):
+    image_path = '%s/%s/' % (config.get('data_root'), image_name)
+    block_path = image_path + config.get('blockname_format') % block_index
+    if not os.path.exists(block_path):
         # the data block file is not allcated yet.
-        ukai_local_allocate_dataspace(image_name, block_size, block_index,
-                                      config)
-    fh = open(path, 'r')
+        return '\0' * size
+    if os.path.getsize(block_path) != block_size:
+        # a block file exists but the size doesn't match.  maybe
+        # garbage.
+        ukai_local_deallocate_dataspace(image_name, block_index, config)
+        return '\0' * size
+
+    fh = open(block_path, 'r')
     fh.seek(offset)
     data = fh.read(size)
     fh.close()
@@ -44,15 +49,16 @@ def ukai_local_read(image_name, block_size, block_index, offset, size, config):
 
     return data
 
-def ukai_local_write(image_name, block_size, block_index, offset, data, config):
-    path = '%s/%s/' % (config.get('data_root'), image_name)
-    path = path + config.get('blockname_format') % block_index
-    if ((not os.path.exists(path))
-        or (os.path.getsize(path) != block_size)):
+def ukai_local_write(image_name, block_size, block_index,
+                     offset, data, config):
+    image_path = '%s/%s/' % (config.get('data_root'), image_name)
+    block_path = image_path + config.get('blockname_format') % block_index
+    if ((not os.path.exists(block_path))
+        or (os.path.getsize(block_path) != block_size)):
         # the data block file is not allcated yet.
         ukai_local_allocate_dataspace(image_name, block_size, block_index,
                                       config)
-    fh = open(path, 'r+')
+    fh = open(block_path, 'r+')
     fh.seek(offset)
     fh.write(data)
     fh.close()
@@ -60,13 +66,31 @@ def ukai_local_write(image_name, block_size, block_index, offset, data, config):
     return len(data)
 
 def ukai_local_allocate_dataspace(image_name, block_size, block_index, config):
-    path = '%s/%s/' % (config.get('data_root'), image_name)
-    if not os.path.exists(path):
-        os.makedirs(path)
-    path = path + config.get('blockname_format') % block_index
-    fh = open(path, 'w')
+    image_path = '%s/%s/' % (config.get('data_root'), image_name)
+    if not os.path.exists(image_path):
+        os.makedirs(image_path)
+    block_path = image_path + config.get('blockname_format') % block_index
+    fh = open(block_path, 'w')
     fh.seek(block_size - 1)
     fh.write('\0')
     fh.close()
 
     return 0
+
+def ukai_local_deallocate_dataspace(image_name, block_index, config):
+    image_path = '%s/%s/' % (config.get('data_root'), image_name)
+    block_path = image_path + config.get('blockname_format') % block_index
+    if not os.path.exists(block_path):
+        return 0
+    os.unlink(block_path)
+
+    return 0
+
+def ukai_local_destroy_image(image_name, config):
+    image_path = '%s/%s/' % (config.get('data_root'), image_name)
+    if not os.path.exists(image_path):
+        return 0
+    shutil.rmtree(image_path)
+
+    return 0
+    

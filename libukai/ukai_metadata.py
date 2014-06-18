@@ -82,6 +82,12 @@ def ukai_metadata_create(image_name, size, block_size,
     metadata.flush()
     del metadata
 
+def ukai_metadata_destroy(image_name, config):
+    client = riak.RiakClient(host=config.get('metadata_server'))
+    bucket = client.bucket(UKAI_METADATA_BUCKET)
+    bucket.delete(image_name)
+    return 0
+
 class UKAIMetadata(object):
     '''
     The UKAIMetadata class contains metadata information of a disk image
