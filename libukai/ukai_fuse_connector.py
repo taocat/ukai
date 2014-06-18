@@ -61,7 +61,7 @@ class UKAIFUSE(LoggingMixIn, Operations):
         return 0
 
     def create(self, path, mode):
-        return errno.EPERM
+        raise FuseOSError(errno.EPERM)
 
     def getattr(self, path, fh=None):
         (ret, st) = self._rpc_client.call('getattr', path)
@@ -70,7 +70,7 @@ class UKAIFUSE(LoggingMixIn, Operations):
         return st
 
     def mkdir(self, path, mode):
-        return errno.EPERM
+        raise FuseOSError(errno.EPERM)
 
     def open(self, path, flags):
         ret = self._rpc_client.call('open', path, flags)
@@ -95,26 +95,28 @@ class UKAIFUSE(LoggingMixIn, Operations):
         return self._rpc_client.call('readdir', path)
 
     def readlink(self, path):
-        return errno.EPERM
+        raise FuseOSError(errno.EPERM)
 
     def rename(self, old, new):
-        return errno.EPERM
+        raise FuseOSError(errno.EPERM)
 
     def rmdir(self, path):
-        return errno.EPERM
+        raise FuseOSError(errno.EPERM)
 
     def statfs(self, path):
         return self._rpc_client.call('statfs', path)
 
     def symlink(self, target, source):
-        return errno.EPERM
+        raise FuseOSError(errno.EPERM)
 
     def truncate(self, path, length, fh=None):
-        #return errno.EPERM
-        pass
+        ret = self._rpc_client.call('truncate', path, length)
+        if ret != 0:
+            raise FuseOSError(ret)
+        return ret
 
     def unlink(self, path):
-        return errno.EPERM
+        raise FuseOSError(errno.EPERM)
 
     def utimens(self, path, times=None):
         pass

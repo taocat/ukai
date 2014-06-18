@@ -28,6 +28,7 @@
 
 import errno
 import json
+import os
 import stat
 import sys
 import zlib
@@ -51,7 +52,7 @@ class UKAICore(object):
         self._data_dict = {}
         self._config = config
         self._node_error_state_set = UKAINodeErrorStateSet()
-        self._open_image_set = set()
+        self._open_for_write_image_set = set()
         self._rpc_trans = UKAIXMLRPCTranslation()
 
     @property
@@ -79,27 +80,30 @@ class UKAICore(object):
             if self._exists(image_name):
                 st = dict(st_mode=(stat.S_IFREG | 0644), st_ctime=0,
                           st_mtime=0, st_atime=0, st_nlink=1,
-                          st_size=self._metadata_dict[image_name].size)
+                          st_size=self._metadata_dict[image_name].used_size)
             else:
                 ret = errno.ENOENT
         return ret, st
 
     def open(self, path, flags):
+        print '%s, %0d (%0x)' % (path, flags ,flags)
         ret = 0
         image_name = path[1:]
         if not self._exists(image_name):
             return errno.ENOENT
-        if image_name in self._open_image_set:
+        if (flags & 3) == os.O_RDONLY:
+            return 0
+        if image_name in self._open_for_write_image_set:
             return errno.EBUSY
         else:
-            self._open_image_set.add(image_name)
+            self._open_for_write_image_set.add(image_name)
 
         return 0
 
     def release(self, path):
         image_name = path[1:]
-        if image_name in self._open_image_set:
-            self._open_image_set.remove(image_name)
+        if image_name in self._open_for_write_image_set:
+            self._open_for_write_image_set.remove(image_name)
         return 0
 
     def read(self, path, size, offset):
@@ -119,7 +123,14 @@ class UKAICore(object):
         return dict(f_bsize=512, f_blocks=4096, f_bavail=2048)
 
     def truncate(self, path, length):
-        return errno.EPERM
+        image_name = path[1:]
+        if not self._exists(image_name):
+            return errno.ENOENT
+        image_metadata = self._metadata_dict[image_name]
+        if image_metadata.size < length:
+            return errno.EINVAL
+        image_metadata.used_size = length
+        return 0
 
     def unlink(self, path):
         return errno.EPERM

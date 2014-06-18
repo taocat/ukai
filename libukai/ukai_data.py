@@ -116,12 +116,12 @@ class UKAIData(object):
         assert size > 0
         assert offset >= 0
 
-        if offset > self._metadata.size:
+        if offset > self._metadata.used_size:
             # end of the file.
             return (0)
-        if offset + size > self._metadata.size:
+        if offset + size > self._metadata.used_size:
             # shorten the size not to overread the end of the file.
-            size = self._metadata.size - offset
+            size = self._metadata.used_size - offset
 
         data = ''
         partial_data = ''
@@ -303,6 +303,9 @@ class UKAIData(object):
                         self._node_error_state_set.add(node, 0)
                 data_offset = data_offset + size_in_blk
         finally:
+            if offset + len(data) > self._metadata.used_size:
+                self._metadata_used_size = offset + len(data)
+                metadata_flush_required = True
             for piece in pieces:
                 self._metadata._lock[piece[0]].release() # XXX
                 self._lock[piece[0]].release()

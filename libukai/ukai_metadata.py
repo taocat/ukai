@@ -68,6 +68,7 @@ def ukai_metadata_create(image_name, size, block_size,
     metadata_raw = {}
     metadata_raw['name'] = image_name
     metadata_raw['size'] = size
+    metadata_raw['used_size'] = 0
     metadata_raw['block_size'] = block_size
     metadata_raw['hypervisors'] = {}
     metadata_raw['hypervisors'][hypervisor] = {'sync_status': UKAI_IN_SYNC}
@@ -188,6 +189,17 @@ class UKAIMetadata(object):
         The total size of the disk image.
         '''
         return (int(self._metadata['size']))
+
+    @property
+    def used_size(self):
+        '''
+        The used size of the disk image.
+        '''
+        return (int(self._metadata['used_size']))
+    @used_size.setter
+    def used_size(self, used_size):
+        self._metadata['used_size'] = used_size
+        self.flush()
 
     @property
     def block_size(self):
