@@ -36,9 +36,9 @@ import sys
 import json
 import netifaces
 import zlib
-import riak
 
 from ukai_config import UKAIConfig
+from ukai_db import UKAIRiakDB
 from ukai_rpc import UKAIXMLRPCCall, UKAIXMLRPCTranslation
 from ukai_utils import UKAIIsLocalNode
 
@@ -83,9 +83,8 @@ def ukai_metadata_create(image_name, size, block_size,
     del metadata
 
 def ukai_metadata_destroy(image_name, config):
-    client = riak.RiakClient(host=config.get('metadata_server'))
-    bucket = client.bucket(UKAI_METADATA_BUCKET)
-    bucket.delete(image_name)
+    db = UKAIRiakDB(config)
+    db.delete_metadata(image_name)
     return 0
 
 class UKAIMetadata(object):
@@ -114,9 +113,8 @@ class UKAIMetadata(object):
             self._metadata = metadata_raw
         else:
             self._metadata = None
-            client = riak.RiakClient(host=self._config.get('metadata_server'))
-            bucket = client.bucket(UKAI_METADATA_BUCKET)
-            self._metadata = bucket.get(image_name).data
+            db = UKAIRiakDB(self._config)
+            self._metadata = db.get_metadata(image_name)
 
         self._lock = []
         for idx in range(0, len(self.blocks)):
@@ -130,11 +128,9 @@ class UKAIMetadata(object):
         try:
             self.acquire_lock()
 
-            # Write out to the local metadata storage.
-            client = riak.RiakClient(host=self._config.get('metadata_server'))
-            bucket = client.bucket(UKAI_METADATA_BUCKET)
-            metadata_riak = bucket.new(self.name, data=self._metadata)
-            metadata_riak.store()
+            # Write out to the metadata storage.
+            db = UKAIRiakDB(self._config)
+            db.put_metadata(self.name, self._metadata)
 
             # Send the latest metadata information to all the
             # hypervisors listed in the hypervisor list of the metadata

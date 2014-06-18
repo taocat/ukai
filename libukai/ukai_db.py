@@ -28,7 +28,7 @@
 
 import riak
 
-class UkaiDB(object):
+class UKAIDB(object):
     def put_metadata(self, image_name, metadata):
         assert False
 
@@ -39,7 +39,7 @@ class UkaiDB(object):
         assert False
 
 UKAI_RIAK_DB_METADATA_BUCKET_NAME = 'metadata'
-class UkaiRiakDB(UkaiDB):
+class UKAIRiakDB(UKAIDB):
     def __init__(self, config):
         self._servers = config.get('metadata_servers')
         self._bucket_name = UKAI_RIAK_DB_METADATA_BUCKET_NAME
@@ -66,7 +66,7 @@ class UkaiRiakDB(UkaiDB):
 if __name__ == '__main__':
     from ukai_config import UKAIConfig
     config = UKAIConfig()
-    db = UkaiRiakDB(config)
+    db = UKAIRiakDB(config)
     db.put_metadata('test', 'hoge')
     print db.get_metadata('test')
     db.delete_metadata('test')
