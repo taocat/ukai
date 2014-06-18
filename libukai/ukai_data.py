@@ -317,7 +317,7 @@ class UKAIData(object):
                 data_offset = data_offset + size_in_blk
         finally:
             if offset + len(data) > self._metadata.used_size:
-                self._metadata_used_size = offset + len(data)
+                self._metadata.used_size = offset + len(data)
                 metadata_flush_required = True
             for piece in pieces:
                 self._metadata._lock[piece[0]].release() # XXX
