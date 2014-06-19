@@ -99,9 +99,11 @@ Before running the UKAI filesystem, you need to create a config
 file at `/etc/ukai/config`.  The file is a kind of a JSON file.
 The following parameters can be configured.
 
-* `metadata_server`: The address of a metadata server that keeps
-  disk metadata information.  You need to prepare a Riak server
-  at this address.
+* `metadata_servers`: The list of addresses of metadata servers
+  that keep disk metadata information.  You need to prepare a
+  Riak cluster with these addresses.
+  Example:
+    "metadata_servers":[{"host"="172.16.0.1"}, {"host"="172.16.0.2"}]
 * `data_root`: The path where virtual machine disk image data is
   stored.
 * `blockname_format`: The filename format of each piece of blocks.
@@ -136,6 +138,7 @@ below.
     {
         "name": "image01",
         "size": 8000000000,
+        "used_size": 8000000000,
         "block_size": 5000000,
         "hypervisors": {
             "192.0.2.100": {
@@ -177,7 +180,7 @@ issue the following command.
     $ ukai_admin create_image -s 8000000000 -b 5000000 -h 192.0.2.100 -l 192.0.2.100 image01
 
 The metadata information is stored on a metadata server on which you
-specified by the `metadata_server` parameter in the config file.
+specified by the `metadata_servers` parameter in the config file.
 
 
 ## Insert a Disk Image
@@ -229,6 +232,13 @@ The `create_image` subcommand generates a virtual disk image.  Before
 using this command, you have to start a UKAI server.
 
     Usage: ukai_admin create_image -s SIZE -b BLOCK_SIZE -h HYPERVISOR -l LOCATION IMAGE_NAME
+
+
+### Destroy a Disk Image
+
+The `destroy_image` subcommand destroys a virtual disk image.
+
+    Usage: ukai_admin destroy_image IMAGE_NAME
 
 
 ### Add a Disk Image
