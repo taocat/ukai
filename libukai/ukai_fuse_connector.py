@@ -27,6 +27,7 @@
 # OF SUCH DAMAGE.
 
 import errno
+import json
 import sys
 
 from fuse import FUSE, FuseOSError, Operations, LoggingMixIn
@@ -63,10 +64,10 @@ class UKAIFUSE(LoggingMixIn, Operations):
         raise FuseOSError(errno.EPERM)
 
     def getattr(self, path, fh=None):
-        (ret, st) = self._rpc_client.call('getattr', path)
+        (ret, json_st) = self._rpc_client.call('getattr', path)
         if ret != 0:
             raise FuseOSError(ret)
-        return st
+        return json.loads(json_st)
 
     def mkdir(self, path, mode):
         raise FuseOSError(errno.EPERM)
@@ -108,7 +109,7 @@ class UKAIFUSE(LoggingMixIn, Operations):
         raise FuseOSError(errno.EPERM)
 
     def truncate(self, path, length, fh=None):
-        ret = self._rpc_client.call('truncate', path, length)
+        ret = self._rpc_client.call('truncate', path, str(length))
         if ret != 0:
             raise FuseOSError(ret)
         return ret

@@ -51,27 +51,27 @@ class UKAICtl(object):
             usage()
             return -1
 
-        size = None
+        str_size = None
         block_size = None
         location = None
         hypervisor = None
         (optlist, args) = getopt.getopt(params, 's:b:l:h:')
         for opt_pair in optlist:
             if opt_pair[0] == '-s':
-                size = int(opt_pair[1])
+                str_size = opt_pair[1]
             if opt_pair[0] == '-b':
                 block_size = int(opt_pair[1])
             if opt_pair[0] == '-l':
                 location = opt_pair[1]
             if opt_pair[0] == '-h':
                 hypervisor = opt_pair[1]
-        if size is None:
+        if str_size is None:
             usage()
             return -1
         image_name = args[0]
         
         return self._rpc_client.call('ctl_create_image', image_name,
-                                     size, block_size,
+                                     str_size, block_size,
                                      location, hypervisor)
 
     def destroy_image(self, *params):

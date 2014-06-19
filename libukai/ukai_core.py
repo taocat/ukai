@@ -101,7 +101,7 @@ class UKAICore(object):
                           st_size=metadata['used_size'])
             else:
                 ret = errno.ENOENT
-        return ret, st
+        return ret, json.dumps(st)
 
     def open(self, path, flags):
         ret = 0
@@ -143,8 +143,9 @@ class UKAICore(object):
         '''
         return dict(f_bsize=512, f_blocks=4096, f_bavail=2048)
 
-    def truncate(self, path, length):
+    def truncate(self, path, str_length):
         image_name = path[1:]
+        length = int(str_length)
         if not self._exists(image_name):
             return errno.ENOENT
         image_metadata = self._metadata_dict[image_name]
@@ -240,9 +241,10 @@ class UKAICore(object):
 
     ''' Controll processing.
     '''
-    def ctl_create_image(self, image_name, size, block_size=None,
+    def ctl_create_image(self, image_name, str_size, block_size=None,
                          location=None, hypervisor=None):
         assert image_name is not None
+        size = int(str_size)
         assert size > 0
 
         if block_size is None:
