@@ -68,7 +68,7 @@ def ukai_metadata_create(image_name, size, block_size,
     metadata_raw = {}
     metadata_raw['name'] = image_name
     metadata_raw['size'] = size
-    metadata_raw['used_size'] = 0
+    metadata_raw['used_size'] = size
     metadata_raw['block_size'] = block_size
     metadata_raw['hypervisors'] = {}
     metadata_raw['hypervisors'][hypervisor] = {'sync_status': UKAI_IN_SYNC}
