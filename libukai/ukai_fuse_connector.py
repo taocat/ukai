@@ -39,7 +39,6 @@ class UKAIFUSE(LoggingMixIn, Operations):
     '''
 
     def __init__(self, config):
-        self._fd = 0
         self._config = config
         self._rpc_client = UKAIXMLRPCClient(self._config)
         self._rpc_trans = UKAIXMLRPCTranslation()
@@ -73,14 +72,13 @@ class UKAIFUSE(LoggingMixIn, Operations):
         raise FuseOSError(errno.EPERM)
 
     def open(self, path, flags):
-        ret = self._rpc_client.call('open', path, flags)
+        ret, fh = self._rpc_client.call('open', path, flags)
         if ret != 0:
             raise FuseOSError(ret)
-        self._fd += 1
-        return self._fd
+        return fh
 
     def release(self, path, fh):
-        self._rpc_client.call('release', path)
+        self._rpc_client.call('release', path, fh)
         return 0
 
     def read(self, path, size, offset, fh):

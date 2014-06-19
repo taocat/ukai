@@ -40,6 +40,9 @@ class UKAICtl(object):
         self._config = config
         self._rpc_client = UKAIXMLRPCClient(self._config)
 
+    def diag(self, *params):
+        self._rpc_client.call('ctl_diag', *params)
+
     def create_image(self, *params):
         def usage():
             print 'Usage: %s create_image [-s SIZE] [-b BLOCK_SIZE] [-l LOCATION] [-h HYPERVISOR] IMAGE_NAME' % sys.argv[0]

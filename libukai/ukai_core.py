@@ -46,6 +46,30 @@ from ukai_node_error_state import UKAINodeErrorStateSet
 from ukai_rpc import UKAIXMLRPCTranslation
 from ukai_statistics import UKAIStatistics, UKAIImageStatistics
 
+class UKAIOpenImageCount(object):
+    def __init__(self):
+        self._images = {}
+
+    def increment(self, image_name):
+        if image_name not in self._images:
+            self._images[image_name] = 1
+        else:
+            self._images[image_name] += 1
+        return self._images[image_name]
+
+    def decrement(self, image_name):
+        ret = None
+        if image_name not in self._images:
+            return errno.ENOENT
+        else:
+            self._images[image_name] -= 1
+            if self._images[image_name] == 0:
+                del self._images[image_name]
+                ret = None
+            else:
+                ret = self._images[image_name]
+        return ret
+
 class UKAICore(object):
     ''' UKAI core processing.
     '''
@@ -57,6 +81,8 @@ class UKAICore(object):
         self._node_error_state_set = UKAINodeErrorStateSet()
         self._open_for_write_image_set = set()
         self._rpc_trans = UKAIXMLRPCTranslation()
+        self._open_count = UKAIOpenImageCount()
+        self._fh = 0
 
     ''' Filesystem I/O processing.
     '''
@@ -68,10 +94,11 @@ class UKAICore(object):
                       st_mtime=0, st_atime=0, st_nlink=2)
         else:
             image_name = path[1:]
-            if self._exists(image_name):
+            metadata = self._get_metadata(image_name)
+            if metadata is not None:
                 st = dict(st_mode=(stat.S_IFREG | 0644), st_ctime=0,
                           st_mtime=0, st_atime=0, st_nlink=1,
-                          st_size=self._metadata_dict[image_name].used_size)
+                          st_size=metadata['used_size'])
             else:
                 ret = errno.ENOENT
         return ret, st
@@ -79,21 +106,35 @@ class UKAICore(object):
     def open(self, path, flags):
         ret = 0
         image_name = path[1:]
-        if not self._exists(image_name):
-            return errno.ENOENT
+        metadata = self._get_metadata(image_name)
+        if metadata is None:
+            return errno.ENOENT, None
+        self._fh += 1
+        if (flags & 3) != os.O_RDONLY:
+            if image_name in self._open_for_write_image_set:
+                return errno.EBUSY, None
+            else:
+                self._open_for_write_image_set.add(self._fh)
+
+        if self._open_count.increment(image_name) == 1:
+            self._add_image(image_name)
+
         if (flags & 3) == os.O_RDONLY:
-            return 0
-        if image_name in self._open_for_write_image_set:
-            return errno.EBUSY
+            R = 'readonly'
         else:
-            self._open_for_write_image_set.add(image_name)
+            R = ''
+        print 'open', image_name, 'as', self._fh, '(mode = ', R, 'refcount =', self._open_count._images[image_name], ')'
 
-        return 0
+        return 0, self._fh
 
-    def release(self, path):
+    def release(self, path, fh):
         image_name = path[1:]
-        if image_name in self._open_for_write_image_set:
-            self._open_for_write_image_set.remove(image_name)
+        if fh in self._open_for_write_image_set:
+            self._open_for_write_image_set.remove(fh)
+        if self._open_count.decrement(image_name) is None:
+            self._remove_image(image_name)
+
+        print 'close', image_name, 'as', fh, 'refcount =', self._open_count._images[image_name] if image_name in self._open_count._images else 0
         return 0
 
     def read(self, path, size, offset):
@@ -133,6 +174,30 @@ class UKAICore(object):
         image_data = self._data_dict[image_name]
         return 0, image_data.write(self._rpc_trans.decode(encoded_data),
                                    offset)
+
+    def _get_metadata(self, image_name):
+        db = UKAIRiakDB(self._config)
+        return db.get_metadata(image_name)
+
+    def _add_image(self, image_name):
+        if image_name in self._metadata_dict:
+            return errno.EEXIST
+        metadata = UKAIMetadata(image_name, self._config)
+        self._metadata_dict[image_name] = metadata
+        data = UKAIData(metadata=metadata,
+                        node_error_state_set=self._node_error_state_set,
+                        config=self._config)
+        self._data_dict[image_name] = data
+        UKAIStatistics[image_name] = UKAIImageStatistics()
+        return 0
+
+    def _remove_image(self, image_name):
+        if image_name not in self._metadata_dict:
+            return errno.ENOENT
+        del self._metadata_dict[image_name]
+        del self._data_dict[image_name]
+        del UKAIStatistics[image_name]
+        return 0
 
     def _exists(self, image_name):
         if image_name not in self._metadata_dict:
@@ -212,69 +277,88 @@ class UKAICore(object):
         ukai_data_destroy(image_name, self._config)
         ukai_metadata_destroy(image_name, self._config)
 
-    def ctl_add_image(self, image_name):
-        if image_name in self._metadata_dict:
-            return errno.EEXIST
-        metadata = UKAIMetadata(image_name, self._config)
-        self._metadata_dict[image_name] = metadata
-        data = UKAIData(metadata=metadata,
-                        node_error_state_set=self._node_error_state_set,
-                        config=self._config)
-        self._data_dict[image_name] = data
-        UKAIStatistics[image_name] = UKAIImageStatistics()
-        return 0
-
-    def ctl_remove_image(self, image_name):
-        if image_name not in self._metadata_dict:
-            return errno.ENOENT
-        del self._metadata_dict[image_name]
-        del self._data_dict[image_name]
-        del UKAIStatistics[image_name]
-        return 0
-
     def ctl_get_metadata(self, image_name):
-        if image_name not in self._metadata_dict:
+        metadata = self._get_metadata(image_name)
+        if metadata is None:
             return errno.ENOENT, None
-        return 0, json.dumps(self._metadata_dict[image_name].metadata)
+        return 0, json.dumps(metadata)
 
     def ctl_add_location(self, image_name, location,
                          start_index=0, end_index=-1,
                          sync_status=UKAI_OUT_OF_SYNC):
-        if image_name not in self._metadata_dict:
-            return errno.ENOENT
-        metadata = self._metadata_dict[image_name]
+        metadata = None
+        if image_name in self._metadata_dict:
+            # the image is in use on this node.
+            metadata = self._metadata_dict[image_name]
+        else:
+            # XXX need to check if no one is using this image.
+            metadata_raw = self._get_metadata(image_name)
+            if metadata_raw is None:
+                return errno.ENOENT
+            metadata = UKAIMetadata(image_name, self._config, metadata_raw)
         metadata.add_location(location, start_index, end_index, sync_status)
         return 0
 
     def ctl_remove_location(self, image_name, location,
                             start_index=0, end_index=-1):
-        if image_name not in self._metadata_dict:
-            return errno.ENOENT
-        metadata = self._metadata_dict[image_name]
+        metadata = None
+        if image_name in self._metadata_dict:
+            # the image is in use on this node.
+            metadata = self._metadata_dict[image_name]
+        else:
+            # XXX need to check if no one is using this image.
+            metadata_raw = self._get_metadata(image_name)
+            if metadata_raw is None:
+                return errno.ENOENT
+            metadata = UKAIMetadata(image_name, self._config, metadata_raw)
+        metadata = UKAIMetadata(image_name, self._config, metadata)
         metadata.remove_location(location, start_index, end_index)
         ukai_data_location_destroy(image_name, location, self._config)
         return 0 
 
     def ctl_add_hypervisor(self, image_name, hypervisor):
-        if image_name not in self._metadata_dict:
-            return errno.ENOENT
-        metadata = self._metadata_dict[image_name]
+        metadata = None
+        if image_name in self._metadata_dict:
+            # the image is in use on this node.
+            metadata = self._metadata_dict[image_name]
+        else:
+            # XXX need to check if no one is using this image.
+            metadata_raw = self._get_metadata(image_name)
+            if metadata_raw is None:
+                return errno.ENOENT
+            metadata = UKAIMetadata(image_name, self._config, metadata_raw)
+        metadata = UKAIMetadata(image_name, self._config, metadata)
         metadata.add_hypervisor(hypervisor)
         return 0
 
     def ctl_remove_hypervisor(self, image_name, hypervisor):
-        if image_name not in self._metadata_dict:
-            return errno.ENOENT
-        metadata = self._metadata_dict[image_name]
+        metadata = None
+        if image_name in self._metadata_dict:
+            # the image is in use on this node.
+            metadata = self._metadata_dict[image_name]
+        else:
+            # XXX need to check if no one is using this image.
+            metadata_raw = self._get_metadata(image_name)
+            if metadata_raw is None:
+                return errno.ENOENT
+            metadata = UKAIMetadata(image_name, self._config, metadata_raw)
         metadata.remove_hypervisor(hypervisor)
         return 0
 
     def ctl_synchronize(self, image_name, start_index=0, end_index=-1,
                         verbose=False):
-        if image_name not in self._metadata_dict:
-            return errno.ENOENT
-        metadata = self._metadata_dict[image_name]
-        data = self._data_dict[image_name]
+        metadata = None
+        if image_name in self._metadata_dict:
+            # the image is in use on this node.
+            metadata = self._metadata_dict[image_name]
+            data = self._data_dict[image_name]
+        else:
+            # XXX need to check if no one is using this image.
+            metadata_raw = self._get_metadata(image_name)
+            if metadata_raw is None:
+                return errno.ENOENT
+            metadata = UKAIMetadata(image_name, self._config, metadata_raw)
+            data = UKAIData(metadata, self._node_error_state_set, self._config)
         if end_index == -1:
             end_index = (metadata.size / metadata.block_size) - 1
         for block_index in range(start_index, end_index + 1):
@@ -292,3 +376,8 @@ class UKAICore(object):
     def ctl_get_image_names(self):
         db = UKAIRiakDB(self._config)
         return db.get_image_names()
+
+    def ctl_diag(self):
+        print self._open_count._images
+        print self._open_for_write_image_set
+        return 0
