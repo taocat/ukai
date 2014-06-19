@@ -212,6 +212,12 @@ block_size=%d''' % (name, size, block_size)
         return self._rpc_client.call('ctl_synchronize', image_name,
                                      start, end, verbose)
 
+    def get_image_names(self, *params):
+        names = self._rpc_client.call('ctl_get_image_names', *params)
+        for name in names:
+            print name
+        return 0
+
 
 def usage():
     print '''Usage: %s SUBCOMMAND PARAMS

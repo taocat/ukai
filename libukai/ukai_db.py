@@ -38,6 +38,9 @@ class UKAIDB(object):
     def delete_metadata(self, image_name):
         assert False
 
+    def get_image_names(self):
+        assert False
+
 UKAI_RIAK_DB_METADATA_BUCKET_NAME = 'metadata'
 class UKAIRiakDB(UKAIDB):
     def __init__(self, config):
@@ -63,10 +66,16 @@ class UKAIRiakDB(UKAIDB):
         bucket.delete(image_name)
         return 0
 
+    def get_image_names(self):
+        client = riak.RiakClient(nodes=self._servers)
+        bucket = client.bucket(self._bucket_name)
+        return bucket.get_keys()
+
 if __name__ == '__main__':
     from ukai_config import UKAIConfig
     config = UKAIConfig()
     db = UKAIRiakDB(config)
     db.put_metadata('test', 'hoge')
     print db.get_metadata('test')
+    print db.get_image_names()
     db.delete_metadata('test')

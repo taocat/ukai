@@ -36,6 +36,7 @@ import zlib
 from ukai_config import UKAIConfig
 from ukai_data import UKAIData
 from ukai_data import ukai_data_destroy, ukai_data_location_destroy
+from ukai_db import UKAIRiakDB
 from ukai_local_io import ukai_local_read, ukai_local_write
 from ukai_local_io import ukai_local_allocate_dataspace
 from ukai_local_io import ukai_local_destroy_image
@@ -287,3 +288,7 @@ class UKAICore(object):
 
     def ctl_get_node_error_state_set(self):
         return self._node_error_state_set.get_list()
+
+    def ctl_get_image_names(self):
+        db = UKAIRiakDB(self._config)
+        return db.get_image_names()
