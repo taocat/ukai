@@ -36,25 +36,9 @@ from libukai.ukai_config import UKAIConfig, UKAI_CONFIG_FILE_DEFAULT
 from libukai.ukai_rpc import UKAIXMLRPCClient
 
 class UKAICtl(object):
-    def __init__(self, config_file):
-        self._config = UKAIConfig(config_file)
+    def __init__(self, config):
+        self._config = config
         self._rpc_client = UKAIXMLRPCClient(self._config)
-
-    @property
-    def core_server(self):
-        return self._config.get('core_server')
-
-    @core_server.setter
-    def core_server(self, core_server):
-        self._config.set('core_server', core_server)
-
-    @property
-    def core_port(self):
-        return self._config.get('core_port')
-
-    @core_port.setter
-    def core_port(self, core_port):
-        self._config.set('core_port', core_port)
 
     def create_image(self, *params):
         def usage():
@@ -102,12 +86,68 @@ class UKAICtl(object):
             return -1
         return self._rpc_client.call('ctl_remove_image', *params)
 
-    def get_metadata(self, *params):
+    def get_image_info(self, *params):
         if len(params) < 1:
-            print 'Usage: %s get_metadata IMAGE_NAME' % sys.argv[0]
+            print 'Usage: %s get_image_info IMAGE_NAME' % sys.argv[0]
             return -1
-        ret, metadata = self._rpc_client.call('ctl_get_metadata', *params)
-        print metadata
+        ret, json_metadata = self._rpc_client.call(
+            'ctl_get_metadata', *params)
+        metadata = json.loads(json_metadata)
+        name = metadata['name']
+        size = metadata['size']
+        used_size = metadata['used_size']
+        block_size = metadata['block_size']
+        blocks = metadata['blocks']
+
+        print '''#
+# Disk Metadata
+#
+name=%s
+size=%d
+block_size=%d''' % (name, size, block_size)
+
+        print '''#
+# Hypervisors
+#'''
+        for hv in metadata['hypervisors'].keys():
+            sync_status = metadata['hypervisors'][hv]['sync_status']
+            print '%s: %s' % (hv, 'Y' if sync_status == 0 else 'N')
+
+        location2index = {}
+        index2location = []
+        location_index = 0
+        for idx in range(0, size / block_size):
+            block = blocks[idx]
+            for loc in block.keys():
+                if loc in location2index:
+                    continue
+                location2index[loc] = location_index
+                index2location.append(loc)
+                location_index = location_index + 1
+        print '''#
+# Location Index
+#'''
+        for loc_idx in range(0, len(location2index)):
+            print '%d=%s' % (loc_idx, index2location[loc_idx])
+
+            print '''#
+# Block Information
+#
+# block_index: location_index:sync_status
+#   sync_status: 'Y' = In-sync, 'N' = Out-of-sync
+#'''
+        for idx in range(0, size / block_size):
+            block = blocks[idx]
+            print self._config.get('blockname_format') % idx, ':',
+            for loc_idx in range(0, len(index2location)):
+                loc = index2location[loc_idx]
+                if loc in block.keys():
+                    print '%d:%s' % (loc_idx,
+                                     'Y' if block[loc]['sync_status'] == 0 else 'N'),
+                else:
+                    print '   ',
+            print ''
+
         return 0
 
     def add_location(self, *params):
@@ -187,15 +227,15 @@ def main():
         usage()
         sys.exit(-1)
     
-    ctl = UKAICtl(UKAI_CONFIG_FILE_DEFAULT)
-
+    config = UKAIConfig(UKAI_CONFIG_FILE_DEFAULT)
     (optlist, args) = getopt.getopt(sys.argv[1:], 'h:p:')
     for opt_pair in optlist:
         if opt_pair[0] == '-h':
-            ctl.core_server = opt_pair[1]
+            config.set('core_server', opt_pair[1])
         if opt_pair[0] == '-p':
-            ctl.core_port = opt_pair[1]
+            config.set('core_port', opt_pair[1])
 
+    ctl = UKAICtl(config)
     if not hasattr(ctl, args[0]):
         usage()
         sys.exit(-1)
