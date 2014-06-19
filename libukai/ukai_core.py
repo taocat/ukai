@@ -34,7 +34,8 @@ import sys
 import zlib
 
 from ukai_config import UKAIConfig
-from ukai_data import UKAIData, ukai_data_destroy
+from ukai_data import UKAIData
+from ukai_data import ukai_data_destroy, ukai_data_location_destroy
 from ukai_local_io import ukai_local_read, ukai_local_write
 from ukai_local_io import ukai_local_allocate_dataspace
 from ukai_local_io import ukai_local_destroy_image
@@ -250,6 +251,7 @@ class UKAICore(object):
             return errno.ENOENT
         metadata = self._metadata_dict[image_name]
         metadata.remove_location(location, start_index, end_index)
+        ukai_data_location_destroy(image_name, location, self._config)
         return 0 
 
     def ctl_add_hypervisor(self, image_name, hypervisor):

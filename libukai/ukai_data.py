@@ -55,8 +55,13 @@ def ukai_data_destroy(image_name, config):
             location_set.add(location)
     for location in location_set:
         rpc_call = UKAIXMLRPCCall(location, config.get('core_port'))
-        rpc_call.call('proxy_destroy_image', metadata.name)
+        rpc_call.call('proxy_destroy_image', image_name)
 
+    return 0
+
+def ukai_data_location_destroy(image_name, location, config):
+    rpc_call = UKAIXMLRPCCall(location, config.get('core_port'))
+    rpc_call.call('proxy_destroy_image', image_name)
     return 0
 
 class UKAIData(object):
