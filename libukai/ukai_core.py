@@ -311,7 +311,6 @@ class UKAICore(object):
             if metadata_raw is None:
                 return errno.ENOENT
             metadata = UKAIMetadata(image_name, self._config, metadata_raw)
-        metadata = UKAIMetadata(image_name, self._config, metadata)
         metadata.remove_location(location, start_index, end_index)
         ukai_data_location_destroy(image_name, location, self._config)
         return 0 
@@ -327,7 +326,6 @@ class UKAICore(object):
             if metadata_raw is None:
                 return errno.ENOENT
             metadata = UKAIMetadata(image_name, self._config, metadata_raw)
-        metadata = UKAIMetadata(image_name, self._config, metadata)
         metadata.add_hypervisor(hypervisor)
         return 0
 
