@@ -241,23 +241,6 @@ The `destroy_image` subcommand destroys a virtual disk image.
     Usage: ukai_admin destroy_image IMAGE_NAME
 
 
-### Add a Disk Image
-
-The `add_image` subcommand adds a virtual disk image defined as a
-metadata file to the running UKAI system.
-
-    Usage: ukai_admin add_image IMAGE_NAME
-
-
-### Remove a Disk Image
-
-The `remove_image` command removes a virtual disk image from the UKAI
-system.  Do not remove a disk image which is still used by a virtual
-machine.
-
-    Usage: ukai_admin remove_image IMAGE_NAME
-
-
 ### Get Image Information
 
 The `get_image_info` command displays information of a virtual disk.
