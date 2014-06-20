@@ -133,7 +133,7 @@ block_size=%d''' % (name, size, block_size)
         for loc_idx in range(0, len(location2index)):
             print '%d=%s' % (loc_idx, index2location[loc_idx])
 
-            print '''#
+        print '''#
 # Block Information
 #
 # block_index: location_index:sync_status
