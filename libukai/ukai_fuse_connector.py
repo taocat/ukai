@@ -26,6 +26,10 @@
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+''' The ukai_fuse_connector.py module provides a FUSE interface
+implementation.
+'''
+
 import errno
 import json
 import sys
@@ -36,54 +40,96 @@ from ukai_config import UKAIConfig
 from ukai_rpc import UKAIXMLRPCClient, UKAIXMLRPCTranslation
 
 class UKAIFUSE(LoggingMixIn, Operations):
-    ''' UKAI FUSE connector.
+    ''' The UKAIFUSE class provides a FUSE operation implementation.
     '''
 
     def __init__(self, config):
+        ''' Initializes the UKAUFUSE class.
+
+        param config: an instance of the UKAIConfig class
+        '''
         self._config = config
         self._rpc_client = UKAIXMLRPCClient(self._config)
         self._rpc_trans = UKAIXMLRPCTranslation()
 
     def init(self, path):
-        ''' Initializing code.
+        ''' Initializes the FUSE operation.
         '''
         pass
 
     def destroy(self, path):
-        ''' Cleanup code.
+        ''' Cleanups the FUSE operation.
         '''
         pass
 
     def chmod(self, path, mode):
+        ''' This interface is provided for changing file modes,
+        howerver UKAI doesn't support any such operation.
+        '''
         return 0
 
     def chown(self, path, uid, gid):
+        ''' This interface is provided for changing owndership of a
+        file, howerver UKAI doesn't support any such operation.
+        '''
         return 0
 
     def create(self, path, mode):
+        ''' This interface is provided for creating a file.  At this
+        moment, UKAI doesn't support creating a virtual disk using
+        this interface.  To create a virtual disk image, use the
+        ukai_admin command.
+        '''
         raise FuseOSError(errno.EPERM)
 
     def getattr(self, path, fh=None):
+        ''' Returns file stat information of a specified file.
+
+        param path: a path name of the file
+        param fh: a file handle of the file (not used)
+        '''
         (ret, json_st) = self._rpc_client.call('getattr', path)
         if ret != 0:
             raise FuseOSError(ret)
         return json.loads(json_st)
 
     def mkdir(self, path, mode):
+        ''' This interface is provided for creating a directory,
+        however UKAI doesn't support hierarchical directory structure
+        at this moment.
+        '''
         raise FuseOSError(errno.EPERM)
 
     def open(self, path, flags):
+        ''' Opens a file specified by the path parameter.
+
+        param path: a path name of the file
+        param flags: flags passed via the open(2) system call
+        '''
         ret, fh = self._rpc_client.call('open', path, flags)
         if ret != 0:
             raise FuseOSError(ret)
         return fh
 
     def release(self, path, fh):
+        ''' Releases a file opened before.
+
+        param path: a path name of the file
+        fh: a file handle of the file
+        '''
         self._rpc_client.call('release', path, fh)
         return 0
 
     def read(self, path, size, offset, fh):
-        # UKAI core returns the data as RPC safe encoded data.
+        ''' Reads data from the file system core.
+
+        param path: a path name of the file
+        param size: the size to be read
+        param offset: the offset from the beginning of the file
+        param fh: a file handle of the file
+        '''
+        # The data returned by the UKAICore.read() method is encoded
+        # using a RPC encorder.
         ret, encoded_data = self._rpc_client.call('read', path,
                                                   size, offset)
         if ret != 0:
@@ -91,38 +137,82 @@ class UKAIFUSE(LoggingMixIn, Operations):
         return self._rpc_trans.decode(encoded_data)
 
     def readdir(self, path, fh):
+        ''' Returns directory entries of a path.
+
+        param path: a path name to be investigated
+        '''
         return self._rpc_client.call('readdir', path)
 
     def readlink(self, path):
+        ''' This interface is provided for reading a symbolic link
+        destination, however UKAI doesn't support symbolic links.
+        '''
         raise FuseOSError(errno.EPERM)
 
     def rename(self, old, new):
+        ''' This interface is provided for renaming (moving) a file
+        path, however UKAI doesn't support a rename operation.
+        '''
         raise FuseOSError(errno.EPERM)
 
     def rmdir(self, path):
+        ''' This interface is provided for removing a directory,
+        however UKAI doesn't support hierarchical directory structure
+        at this moment.
+        '''
         raise FuseOSError(errno.EPERM)
 
     def statfs(self, path):
+        ''' Returns a stat information of a file system where the
+        specified file belongs to.
+
+        param path: a path name of the file
+        '''
         return self._rpc_client.call('statfs', path)
 
     def symlink(self, target, source):
+        ''' This interface is provided for creating a symbolic link
+        file, however UKAI doesn't support symbolic links.
+        '''
         raise FuseOSError(errno.EPERM)
 
     def truncate(self, path, length, fh=None):
+        ''' Changes the size of a file.
+
+        param path: a path name of the file
+        param length: the new size of the file
+        param fh: a file handle of the file
+        '''
         ret = self._rpc_client.call('truncate', path, str(length))
         if ret != 0:
             raise FuseOSError(ret)
         return ret
 
     def unlink(self, path):
+        ''' This interface is provided for removing a file, howerver
+        UKAI doesn't support removing files using this interface.  To
+        remove a file (virtual disk image), use the ukai_admin
+        command.
+        '''
         raise FuseOSError(errno.EPERM)
 
     def utimens(self, path, times=None):
+        ''' This interface is provided for setting time stamp
+        information of a file, howerver, UKAI doesn't have such
+        metadata.
+        '''
         pass
 
     def write(self, path, data, offset, fh):
-        # need to convert data to UKAI Core as a RPC safe
-        # encoded data.
+        ''' Writes data to a file.
+
+        param path: a path name of the file
+        param data: data to be written
+        param offset: the offset from the beginning of the file
+        param fh: a file handle of the file
+        '''
+        # The data passed to the UKAICore.write interface must be
+        # encoded using a proper RPC encoding mechanism.
         encoded_data = self._rpc_trans.encode(data)
         ret, nwritten = self._rpc_client.call('write', path,
                                               encoded_data, offset)
