@@ -127,7 +127,7 @@ image data and hypervisors as well.
 Next, you need to expose the storage system by mounting the data to a
 directory somewhere by using the `ukai_fuse` command.
 
-    $ sudo ukai_fuse /mnt
+    $ sudo ukai_fuse /ukai
 
 
 ## Prepare a Disk Image
@@ -183,18 +183,6 @@ The metadata information is stored on a metadata server on which you
 specified by the `metadata_servers` parameter in the config file.
 
 
-## Insert a Disk Image
-
-Initially, there is no disk image attached to the UKAI filesystem.
-You need to add a disk image.  The image metadata must be prepared
-before adding the disk.
-
-    $ ukai_admin add_image image01
-
-Once you complete the above process, you will see that your image is
-added under the UKAI mount point.
-
-
 ## Using as a Disk Image
 
 The image file can be used directly as a disk image file.  The
@@ -239,6 +227,14 @@ using this command, you have to start a UKAI server.
 The `destroy_image` subcommand destroys a virtual disk image.
 
     Usage: ukai_admin destroy_image IMAGE_NAME
+
+
+### List images
+
+The `get_image_names` subcommand will print all the virtual disk images
+curently registered in the UKAI filesystem.
+
+    Usage: ukai_admin get_image_names
 
 
 ### Get Image Information
