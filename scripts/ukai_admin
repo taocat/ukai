@@ -30,12 +30,13 @@
 
 import getopt
 import json
+import os
 import sys
 
 from libukai.ukai_config import UKAIConfig, UKAI_CONFIG_FILE_DEFAULT
 from libukai.ukai_rpc import UKAIXMLRPCClient
 
-class UKAICtl(object):
+class UKAIAdmin(object):
     def __init__(self, config):
         self._config = config
         self._rpc_client = UKAIXMLRPCClient(self._config)
@@ -45,7 +46,7 @@ class UKAICtl(object):
 
     def create_image(self, *params):
         def usage():
-            print 'Usage: %s create_image [-s SIZE] [-b BLOCK_SIZE] [-l LOCATION] [-h HYPERVISOR] IMAGE_NAME' % sys.argv[0]
+            print 'Usage: %s create_image [-s SIZE] [-b BLOCK_SIZE] [-l LOCATION] [-h HYPERVISOR] IMAGE_NAME' % os.path.basename(sys.argv[0])
 
         if len(params) < 1:
             usage()
@@ -77,21 +78,10 @@ class UKAICtl(object):
     def destroy_image(self, *params):
         return self._rpc_client.call('ctl_destroy_image', *params)
 
-    def add_image(self, *params):
-        if len(params) < 1:
-            print 'Usage: %s add_image IMAGE_NAME' % sys.argv[0]
-            return -1
-        return self._rpc_client.call('ctl_add_image', *params)
-
-    def remove_image(self, *params):
-        if len(params) < 1:
-            print 'Usage: %s remove_image IMAGE_NAME' % sys.argv[0]
-            return -1
-        return self._rpc_client.call('ctl_remove_image', *params)
-
     def get_image_info(self, *params):
         if len(params) < 1:
-            print 'Usage: %s get_image_info IMAGE_NAME' % sys.argv[0]
+            print ('Usage: %s get_image_info IMAGE_NAME'
+                   % os.path.basename(sys.argv[0]))
             return -1
         ret, json_metadata = self._rpc_client.call(
             'ctl_get_metadata', *params)
@@ -156,34 +146,34 @@ block_size=%d''' % (name, size, block_size)
     def add_location(self, *params):
         if len(params) < 2:
             print ('Usage: %s add_location IMAGE_NAME LOCATION'
-                   % sys.argv[0])
+                   % os.path.basename(sys.argv[0]))
             return -1
         return self._rpc_client.call('ctl_add_location', *params)
 
     def remove_location(self, *params):
         if len(params) < 2:
             print ('Usage: %s remove_location IMAGE_NAME LOCATION'
-                   % sys.argv[0])
+                   % os.path.basename(sys.argv[0]))
             return -1
         return self._rpc_client.call('ctl_remove_location', *params)
 
     def add_hypervisor(self, *params):
         if len(params) < 2:
             print ('Usage: %s add_hypervisor IMAGE_NAME HYPERVISOR'
-                   % sys.argv[0])
+                   % os.path.basename(sys.argv[0]))
             return -1
         return self._rpc_client.call('ctl_add_hypervisor', *params)
 
     def remove_hypervisor(self, *params):
         if len(params) < 2:
             print ('Usage: %s remove_hypervisor IMAGE_NAME HYPERVISOR'
-                   % sys.argv[0])
+                   % os.path.basename(sys.argv[0]))
             return -1
         return self._rpc_client.call('ctl_remove_hypervisor', *params)
 
     def synchronize(self, *params):
         if len(params) < 1:
-            print 'Usage: %s synchronize [-s START_BLOCK] [-e END_BLOCK] [-v] IMAGE_NAME' % sys.argv[0]
+            print 'Usage: %s synchronize [-s START_BLOCK] [-e END_BLOCK] [-v] IMAGE_NAME' % os.path.basename(sys.argv[0])
             return -1
 
         start = 0
@@ -223,33 +213,38 @@ block_size=%d''' % (name, size, block_size)
 
 
 def usage():
-    print '''Usage: %s SUBCOMMAND PARAMS
-  SUBCOMMANDS: add_image, remove_image, get_metadata
-    add_location, remove_location, add_hypervisor, remove_hypervisor,
-    synchronize''' % sys.argv[0]
+    print '''Usage: %s [-s CORE_SERVER] [-p CORE_PORT] SUBCOMMAND [PARAMS]
+
+SUBCOMMANDS:
+    create_image: creates a virtual disk image
+    destroy_image: destroies a virtual disk image
+    get_metadata: prints metadata information of a virtual disk image
+    add_location: adds a location to a virtual disk image
+    remove_location: removes a location from a virtual disk image
+    add_hypervisor: adds a hypervisor to a virtual disk image
+    remove_hypervisor: removes a hypervisor from a virtual disk image
+    synchronize: synchronizes a virtual disk image among locations
+''' % os.path.basename(sys.argv[0])
 
 def main():
-    server = '127.0.0.1'
-    port = 22221
-
     if len(sys.argv) < 2:
         usage()
         sys.exit(-1)
     
     config = UKAIConfig(UKAI_CONFIG_FILE_DEFAULT)
-    (optlist, args) = getopt.getopt(sys.argv[1:], 'h:p:')
+    (optlist, args) = getopt.getopt(sys.argv[1:], 's:p:')
     for opt_pair in optlist:
-        if opt_pair[0] == '-h':
+        if opt_pair[0] == '-s':
             config.set('core_server', opt_pair[1])
         if opt_pair[0] == '-p':
             config.set('core_port', opt_pair[1])
 
-    ctl = UKAICtl(config)
-    if not hasattr(ctl, args[0]):
+    admin = UKAIAdmin(config)
+    if not hasattr(admin, args[0]):
         usage()
         sys.exit(-1)
 
-    return getattr(ctl, args[0])(*args[1:])
+    return getattr(admin, args[0])(*args[1:])
 
 if __name__ == '__main__':
     main()
