@@ -26,16 +26,16 @@
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-'''
-The ukai_metadata.py module defines classes and functions to handle
-metadata information of the UKAI system.
+''' The ukai_metadata.py module defines classes and functions to
+handle metadata information of a UKAI virtual disk image.
 '''
 
-import threading
-import sys
 import json
-import netifaces
+import sys
+import threading
 import zlib
+
+import netifaces
 
 from ukai_config import UKAIConfig
 from ukai_db import UKAIRiakDB
@@ -48,22 +48,20 @@ UKAI_OUT_OF_SYNC = 2
 
 UKAI_METADATA_BUCKET = 'metadata'
 
-
 def ukai_metadata_create(image_name, size, block_size,
                          location, hypervisor, config):
-    ''' The UKAIMetadataCreate function creates a metadata file.
+    ''' The ukai_metadata_create function creates a metadata
+    information.
 
-    name: The name of the disk image.
-    size: The total size of the disk image.  The size must be multiple
-        of the block_size value.
-    block_size: The block size of the disk image.
-    hypervisor: The hyprevisor address on which a virtual machine
-        of this disk user runs.
-    location: The node address (currently IPv4 numeric address only) of
-        initial data store.
-    config: A UKAI config instance.
-
-    Return values: This function does not return any values.
+    param name: the name of a virtual disk image
+    param size: the total size of a virtual disk image, where the
+        size must be multiple of the block_size value
+    param block_size: The block size of a virtual disk image
+    param hypervisor: The hyprevisor address on which a virtual
+        machine of this disk user runs
+    param location: The node address (currently IPv4 numeric
+        address only) of initial data store.
+    param config: an UKAIConfig instance.
     '''
     metadata_raw = {}
     metadata_raw['name'] = image_name
@@ -83,6 +81,12 @@ def ukai_metadata_create(image_name, size, block_size,
     del metadata
 
 def ukai_metadata_destroy(image_name, config):
+    ''' The ukai_metadata_destroy function deletes metadata
+    information.
+
+    param image_name: the name of a virtual disk image
+    param config: an UKAIConfig instance
+    '''
     db = UKAIRiakDB(config)
     db.delete_metadata(image_name)
     return 0

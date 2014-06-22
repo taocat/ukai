@@ -26,6 +26,10 @@
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
+''' The ukai_core.py module defines classes required for the UKAI
+filesystem core operations.
+'''
+
 import errno
 import json
 import os
@@ -71,7 +75,8 @@ class UKAIOpenImageCount(object):
         return ret
 
 class UKAICore(object):
-    ''' UKAI core processing.
+    ''' The UKAICore class implements core processing of the UKAI
+    filesystem.
     '''
 
     def __init__(self, config):

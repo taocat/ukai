@@ -26,9 +26,8 @@
 # OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
 # OF SUCH DAMAGE.
 
-'''
-The ukai_data.py module defines classes and functions to handle image
-data of the UKAI system.
+''' The ukai_data.py module defines classes and functions to handle
+image data of a UKAI virtual disk image.
 '''
 
 import os
@@ -47,6 +46,12 @@ from ukai_statistics import UKAIStatistics
 from ukai_utils import UKAIIsLocalNode
 
 def ukai_data_destroy(image_name, config):
+    ''' The ukai_datadestroy function deletes data files of a virtual
+    disk image.
+
+    param image_name: the name of a virtual disk image
+    param config: an UKAIConfig instance
+    '''
     metadata = UKAIMetadata(image_name, config)
     blocks = metadata.blocks
     location_set = set()
@@ -60,6 +65,13 @@ def ukai_data_destroy(image_name, config):
     return 0
 
 def ukai_data_location_destroy(image_name, location, config):
+    ''' The ukai_data_location_destroy function deletes a data file
+    stored at the specified location.
+
+    param image_name: the name of a virtual disk image
+    param location: address of a location
+    param config: an UKAIConfig instance
+    '''
     rpc_call = UKAIXMLRPCCall(location, config.get('core_port'))
     rpc_call.call('proxy_destroy_image', image_name)
     return 0

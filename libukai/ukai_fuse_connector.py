@@ -46,7 +46,7 @@ class UKAIFUSE(LoggingMixIn, Operations):
     def __init__(self, config):
         ''' Initializes the UKAUFUSE class.
 
-        param config: an instance of the UKAIConfig class
+        param config: an UKAIConfig instance
         '''
         self._config = config
         self._rpc_client = UKAIXMLRPCClient(self._config)
@@ -85,8 +85,8 @@ class UKAIFUSE(LoggingMixIn, Operations):
     def getattr(self, path, fh=None):
         ''' Returns file stat information of a specified file.
 
-        param path: a path name of the file
-        param fh: a file handle of the file (not used)
+        param path: the path name of a file
+        param fh: the file handle of the file (not used)
         '''
         (ret, json_st) = self._rpc_client.call('getattr', path)
         if ret != 0:
@@ -103,8 +103,8 @@ class UKAIFUSE(LoggingMixIn, Operations):
     def open(self, path, flags):
         ''' Opens a file specified by the path parameter.
 
-        param path: a path name of the file
-        param flags: flags passed via the open(2) system call
+        param path: the path name of a file
+        param flags: the flags passed via the open(2) system call
         '''
         ret, fh = self._rpc_client.call('open', path, flags)
         if ret != 0:
@@ -114,19 +114,19 @@ class UKAIFUSE(LoggingMixIn, Operations):
     def release(self, path, fh):
         ''' Releases a file opened before.
 
-        param path: a path name of the file
-        fh: a file handle of the file
+        param path: the path name of a file
+        param fh: the file handle of the file
         '''
         self._rpc_client.call('release', path, fh)
         return 0
 
     def read(self, path, size, offset, fh):
-        ''' Reads data from the file system core.
+        ''' Reads data from the UKAI core filesystem.
 
-        param path: a path name of the file
+        param path: the path name of a file
         param size: the size to be read
         param offset: the offset from the beginning of the file
-        param fh: a file handle of the file
+        param fh: the file handle of the file
         '''
         # The data returned by the UKAICore.read() method is encoded
         # using a RPC encorder.
@@ -166,7 +166,7 @@ class UKAIFUSE(LoggingMixIn, Operations):
         ''' Returns a stat information of a file system where the
         specified file belongs to.
 
-        param path: a path name of the file
+        param path: the path name of a file
         '''
         return self._rpc_client.call('statfs', path)
 
@@ -179,9 +179,9 @@ class UKAIFUSE(LoggingMixIn, Operations):
     def truncate(self, path, length, fh=None):
         ''' Changes the size of a file.
 
-        param path: a path name of the file
+        param path: the path name of a file
         param length: the new size of the file
-        param fh: a file handle of the file
+        param fh: the file handle of the file
         '''
         ret = self._rpc_client.call('truncate', path, str(length))
         if ret != 0:
@@ -206,10 +206,10 @@ class UKAIFUSE(LoggingMixIn, Operations):
     def write(self, path, data, offset, fh):
         ''' Writes data to a file.
 
-        param path: a path name of the file
-        param data: data to be written
+        param path: the path name of a file
+        param data: the data to be written
         param offset: the offset from the beginning of the file
-        param fh: a file handle of the file
+        param fh: the file handle of the file
         '''
         # The data passed to the UKAICore.write interface must be
         # encoded using a proper RPC encoding mechanism.

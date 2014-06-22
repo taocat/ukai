@@ -30,11 +30,11 @@
 The ukai_config.py module defines the global parameters of the
 UKAI system.
 
-metadata_root: the location of the backend metadata storage space.
-data_root: the location of the backend image storage space.
-blockname_format: the filename format of each block data.
-proxy_port: the listening port of the UKAI system to receive
-    remote read/write operations.
+metadata_servers: the location of the backend metadata servers
+data_root: the location of the backend image storage space
+blockname_format: the filename format of each block data file
+core_server: the IP address of the UKAICore service
+core_port: the port number of the UKAICore service
 '''
 
 import json
@@ -45,7 +45,14 @@ UKAI_CONFIG_FILE_DEFAULT = '/etc/ukai/config'
 comment_re = re.compile('^\s*#.*$', re.MULTILINE)
 
 class UKAIConfig(object):
+    ''' The UKAIConfig class provides interfaces to keep/get/set
+    general configuration parameters.
+    '''
     def __init__(self, config_file=UKAI_CONFIG_FILE_DEFAULT):
+        ''' Initializes the UKAIConfig class.
+
+        param config_file: a path name of a configuration file
+        '''
         config_content = ''
         with open(config_file) as fp:
             config_content = ''.join(fp.readlines())
@@ -57,15 +64,31 @@ class UKAIConfig(object):
                 
         self._config = json.loads(config_content)
 
-    def get(self, param):
-        if param in self._config:
-            return (self._config[param])
+    def get(self, key):
+        ''' Returns a configuration value.  If the specified key
+        doesn't exist in the UKAIConfig instance, None is returned.
+
+        param key: a key to be retrieved
+        '''
+        if key in self._config:
+            return (self._config[key])
         else:
             return (None)
 
-    def set(self, param, value):
-        self._config[param] = value
+    def set(self, key, value):
+        ''' Sets a configuration value.  If the specified key doesn't
+        exist, a new key entry will be created.
+
+        param key: a key of the configuration value
+        param value: a new value of the key
+        '''
+        self._config[key] = value
 
 if __name__ == '__main__':
     config = UKAIConfig()
     print config._config
+    if config.get('nonexistent') is None:
+        print 'Getting non existent entry worked.'
+    config.set('test', 'testvalue')
+    if config.get('test') == 'testvalue':
+        print 'Setting and getting worked.'
