@@ -42,7 +42,7 @@ class UKAIRPCTranslation(object):
     def encode(self, source):
         return source
 
-    def decode(self, souce):
+    def decode(self, source):
         return source
 
 class UKAIXMLRPCClient(UKAIRPCClient):
