@@ -74,7 +74,7 @@ following software modules are required to run the UKAI filesystem.
   to FUSE.
 * [netifaces][netifaces]: A portable library to access network
   interfaces from Python.
-* [Riak][riak]: A distributed distributed database.
+* [ZooKeeper][zookeeper]: A centralized cluster management service.
 
 In some environment (e.g. Ubuntu), you may need to join the 'fuse'
 group and may need to configure the '/etc/fuse.conf' file to include
@@ -99,11 +99,12 @@ Before running the UKAI filesystem, you need to create a config
 file at `/etc/ukai/config`.  The file is a kind of a JSON file.
 The following parameters can be configured.
 
+* `id`: IPv4 address of a local node.
 * `metadata_servers`: The list of addresses of metadata servers
   that keep disk metadata information.  You need to prepare a
-  Riak cluster with these addresses.
+  ZooKeeper cluster with these addresses.
   Example:
-    "metadata_servers":[{"host"="172.16.0.1"}, {"host"="172.16.0.2"}]
+    "metadata_servers":"172.16.0.1,172.16.0.2"
 * `data_root`: The path where virtual machine disk image data is
   stored.
 * `blockname_format`: The filename format of each piece of blocks.
@@ -201,11 +202,7 @@ following is an example of the libvirt style disk definition.
 
 When you want to migrate a virtual machine from one hypervisor to
 another hypervisor which is using the UKAI system, you must run the
-UKAI system on both hypervisors.  The addresses of hypervisors that
-will host a virtual machine that uses a specific disk image must be
-listed in the `hypervisors` key of the disk image.  The metadata
-information of the disk is disseminated only to the hyprevisors listed
-in the key.
+UKAI system on both hypervisors.
 
 
 ## Utility Commands
@@ -244,26 +241,6 @@ You can view the metadata information (name, size, block_size, and
 location information) of the specified virtual disk.
 
     Usage: ukai_admin get_image_info IMAGE_NAME
-
-
-### Add a Hypervisor
-
-The `add_hypervisor` subcommand adds a new hypervisor address to the
-specified virtual disk image.  If you are planning a migration
-operation of a virtual machine, then the destination hypervisor must
-be added using this command.
-
-    Usage: ukai_admin add_hypervisor IMAGE_NAME HYPERVISOR
-
-
-### Remove a Hypervisor
-
-The `remove_hypervisor` subcommand removes a hypervisor address from
-the specified virtual disk image.  If you no longer migrate a virtual
-machine to a certain hypervisor, then you better to remove the address
-from the hypervisor list to reduce metadata synchronization overhead.
-
-    Usage: ukai_admin remove_hypervisor IMAGE_NAME HYPERVISOR
 
 
 ### Add Location Information
@@ -318,11 +295,11 @@ specified virtual disk image.
 __________________________________________________________
 [python]: http://www.python.org/
   "Python Programming Language"
-[fuse]: http://fuse.sourceforge.net
+[fuse]: http://fuse.sourceforge.net/
   "FUSE: Filesystem in Userspace"
-[fusepy]: https://github.com/terencehonles/fusepy
+[fusepy]: https://github.com/terencehonles/fusepy/
   "A Python module that provides a simple interface to FUSE and MacFUSE"
 [netifaces]: http://alastairs-place.net/projects/netifaces/
   "Portable access to network interfaces from Python"
-[riak]: http://basho.com
-  "Riak: A distributed database system"
+[zookeeper]: http://zookeeper.apache.org/
+  "Apache ZooKeeper: A centralized cluster management service.
