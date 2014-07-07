@@ -60,6 +60,7 @@ def ukai_data_destroy(image_name, config):
             location_set.add(location)
     for location in location_set:
         rpc_call = UKAIXMLRPCCall(location, config.get('core_port'))
+        # XXX handle rpc error.
         rpc_call.call('proxy_destroy_image', image_name)
 
     return 0

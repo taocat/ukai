@@ -48,8 +48,7 @@ UKAI_OUT_OF_SYNC = 2
 
 UKAI_METADATA_BUCKET = 'metadata'
 
-def ukai_metadata_create(image_name, size, block_size,
-                         location, hypervisor, config):
+def ukai_metadata_create(image_name, size, block_size, location, config):
     ''' The ukai_metadata_create function creates a metadata
     information.
 
@@ -57,8 +56,6 @@ def ukai_metadata_create(image_name, size, block_size,
     param size: the total size of a virtual disk image, where the
         size must be multiple of the block_size value
     param block_size: The block size of a virtual disk image
-    param hypervisor: The hyprevisor address on which a virtual
-        machine of this disk user runs
     param location: The node address (currently IPv4 numeric
         address only) of initial data store.
     param config: an UKAIConfig instance.
@@ -68,8 +65,6 @@ def ukai_metadata_create(image_name, size, block_size,
     metadata_raw['size'] = size
     metadata_raw['used_size'] = size
     metadata_raw['block_size'] = block_size
-    metadata_raw['hypervisors'] = {}
-    metadata_raw['hypervisors'][hypervisor] = {'sync_status': UKAI_IN_SYNC}
     metadata_raw['blocks'] = []
     blocks = metadata_raw['blocks']
     for block_num in range(0, size / block_size):
@@ -139,7 +134,6 @@ class UKAIMetadata(object):
                 if UKAIIsLocalNode(hv):
                     continue
                 try:
-                    self._set_hypervisor_sync_status(hv, UKAI_IN_SYNC)
                     rpc_call = UKAIXMLRPCCall(
                         hv, self._config.get('core_port'))
                     rpc_call.call('proxy_update_metadata',
@@ -148,7 +142,6 @@ class UKAIMetadata(object):
                 except (IOError, xmlrpclib.Error), e:
                     print e.__class__
                     print 'Failed to update metadata at %s.  You cannot migrate a virtual machine to %s' % (hv, hv)
-                    self._set_hypervisor_sync_status(hv, UKAI_OUT_OF_SYNC)
 
         finally:
             self.release_lock()
@@ -210,13 +203,6 @@ class UKAIMetadata(object):
         return (int(self._metadata['block_size']))
 
     @property
-    def hypervisors(self):
-        '''
-        The list of all hypervisors to host this virtual machine.
-        '''
-        return(self._metadata['hypervisors'])
-
-    @property
     def blocks(self):
         '''
         An array of all blocks.  Need to acquire lock when modifying
@@ -268,13 +254,6 @@ class UKAIMetadata(object):
 
         for blk_idx in range(0, end_idx + 1):
             self._lock[blk_idx].release()
-
-    def _set_hypervisor_sync_status(self, hypervisor, sync_status):
-        assert (sync_status == UKAI_IN_SYNC
-                or sync_status == UKAI_SYNCING
-                or sync_status == UKAI_OUT_OF_SYNC)
-
-        self.hypervisors[hypervisor]['sync_status'] = sync_status
 
     def set_sync_status(self, blk_idx, node, sync_status):
         '''
@@ -391,31 +370,6 @@ class UKAIMetadata(object):
 
         self.flush()
 
-    def add_hypervisor(self, hypervisor):
-        '''
-        Adds a new hypervisor to the list of hypervisors.
-
-        hypervisor: The IP address of a new hypervisor.
-
-        Return values: This function does not return any values.
-        '''
-        if hypervisor not in self.hypervisors.keys():
-            self.hypervisors[hypervisor] = {'sync_status': UKAI_OUT_OF_SYNC}
-
-        self.flush()
-
-    def remove_hypervisor(self, hypervisor):
-        '''
-        Removed a hypervisor from the list of hypervisors.
-
-        hypervisor: The IP address of the hypervisor to be removed.
-
-        Return values: This function does not return any values.
-        '''
-        if hypervisor in self.hypervisors.keys():
-            del self.hypervisors[hypervisor]
-
-        self.flush()
 
 if __name__ == '__main__':
     UKAIMetadataCreate('test', 1000000, 100000, '192.168.100.1',

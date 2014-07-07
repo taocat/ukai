@@ -62,16 +62,13 @@ class UKAIOpenImageCount(object):
         return self._images[image_name]
 
     def decrement(self, image_name):
-        ret = None
-        if image_name not in self._images:
-            return errno.ENOENT
+        assert image_name in self._images
+        ret = 0
+        self._images[image_name] -= 1
+        if self._images[image_name] == 0:
+            del self._images[image_name]
         else:
-            self._images[image_name] -= 1
-            if self._images[image_name] == 0:
-                del self._images[image_name]
-                ret = None
-            else:
-                ret = self._images[image_name]
+            ret = self._images[image_name]
         return ret
 
 class UKAICore(object):
@@ -129,7 +126,7 @@ class UKAICore(object):
         image_name = path[1:]
         if fh in self._open_for_write_image_set:
             self._open_for_write_image_set.remove(fh)
-        if self._open_count.decrement(image_name) is None:
+        if self._open_count.decrement(image_name) == 0:
             self._remove_image(image_name)
         return 0
 
@@ -245,7 +242,7 @@ class UKAICore(object):
     ''' Controll processing.
     '''
     def ctl_create_image(self, image_name, str_size, block_size=None,
-                         location=None, hypervisor=None):
+                         location=None):
         assert image_name is not None
         size = int(str_size)
         assert size > 0
@@ -260,11 +257,9 @@ class UKAICore(object):
 
         if location is None:
             location = self._config.get('core_server')
-        if hypervisor is None:
-            hypervisor = self._config.get('core_server')
 
         ukai_metadata_create(image_name, size, block_size,
-                             location, hypervisor, self._config)
+                             location, self._config)
 
     def ctl_destroy_image(self, image_name):
         assert image_name is not None

@@ -46,7 +46,7 @@ class UKAIAdmin(object):
 
     def create_image(self, *params):
         def usage():
-            print 'Usage: %s create_image [-s SIZE] [-b BLOCK_SIZE] [-l LOCATION] [-h HYPERVISOR] IMAGE_NAME' % os.path.basename(sys.argv[0])
+            print 'Usage: %s create_image [-s SIZE] [-b BLOCK_SIZE] [-l LOCATION] IMAGE_NAME' % os.path.basename(sys.argv[0])
 
         if len(params) < 1:
             usage()
@@ -55,7 +55,6 @@ class UKAIAdmin(object):
         str_size = None
         block_size = None
         location = None
-        hypervisor = None
         (optlist, args) = getopt.getopt(params, 's:b:l:h:')
         for opt_pair in optlist:
             if opt_pair[0] == '-s':
@@ -64,16 +63,13 @@ class UKAIAdmin(object):
                 block_size = int(opt_pair[1])
             if opt_pair[0] == '-l':
                 location = opt_pair[1]
-            if opt_pair[0] == '-h':
-                hypervisor = opt_pair[1]
         if str_size is None:
             usage()
             return -1
         image_name = args[0]
         
         return self._rpc_client.call('ctl_create_image', image_name,
-                                     str_size, block_size,
-                                     location, hypervisor)
+                                     str_size, block_size, location)
 
     def destroy_image(self, *params):
         return self._rpc_client.call('ctl_destroy_image', *params)
@@ -98,13 +94,6 @@ class UKAIAdmin(object):
 name=%s
 size=%d
 block_size=%d''' % (name, size, block_size)
-
-        print '''#
-# Hypervisors
-#'''
-        for hv in metadata['hypervisors'].keys():
-            sync_status = metadata['hypervisors'][hv]['sync_status']
-            print '%s: %s' % (hv, 'Y' if sync_status == 0 else 'N')
 
         location2index = {}
         index2location = []
@@ -157,20 +146,6 @@ block_size=%d''' % (name, size, block_size)
             return -1
         return self._rpc_client.call('ctl_remove_location', *params)
 
-    def add_hypervisor(self, *params):
-        if len(params) < 2:
-            print ('Usage: %s add_hypervisor IMAGE_NAME HYPERVISOR'
-                   % os.path.basename(sys.argv[0]))
-            return -1
-        return self._rpc_client.call('ctl_add_hypervisor', *params)
-
-    def remove_hypervisor(self, *params):
-        if len(params) < 2:
-            print ('Usage: %s remove_hypervisor IMAGE_NAME HYPERVISOR'
-                   % os.path.basename(sys.argv[0]))
-            return -1
-        return self._rpc_client.call('ctl_remove_hypervisor', *params)
-
     def synchronize(self, *params):
         if len(params) < 1:
             print 'Usage: %s synchronize [-s START_BLOCK] [-e END_BLOCK] [-v] IMAGE_NAME' % os.path.basename(sys.argv[0])
@@ -221,8 +196,6 @@ SUBCOMMANDS:
     get_metadata: prints metadata information of a virtual disk image
     add_location: adds a location to a virtual disk image
     remove_location: removes a location from a virtual disk image
-    add_hypervisor: adds a hypervisor to a virtual disk image
-    remove_hypervisor: removes a hypervisor from a virtual disk image
     synchronize: synchronizes a virtual disk image among locations
 ''' % os.path.basename(sys.argv[0])
 
