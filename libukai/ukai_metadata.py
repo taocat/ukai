@@ -135,7 +135,7 @@ class UKAIMetadata(object):
 
             # Send the latest metadata information to all the hypervisors
             # using this virtual disk.
-            for hv in ukai_db_client.get_readers():
+            for hv in ukai_db_client.get_readers(self.name):
                 if UKAIIsLocalNode(hv):
                     continue
                 try:
