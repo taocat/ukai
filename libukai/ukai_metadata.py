@@ -38,7 +38,7 @@ import zlib
 import netifaces
 
 from ukai_config import UKAIConfig
-from ukai_db import UKAIRiakDB
+from ukai_db import ukai_db_client
 from ukai_rpc import UKAIXMLRPCCall, UKAIXMLRPCTranslation
 from ukai_utils import UKAIIsLocalNode
 
@@ -87,8 +87,7 @@ def ukai_metadata_destroy(image_name, config):
     param image_name: the name of a virtual disk image
     param config: an UKAIConfig instance
     '''
-    db = UKAIRiakDB(config)
-    db.delete_metadata(image_name)
+    ukai_db_client.delete_metadata(image_name)
     return 0
 
 class UKAIMetadata(object):
@@ -117,8 +116,7 @@ class UKAIMetadata(object):
             self._metadata = metadata_raw
         else:
             self._metadata = None
-            db = UKAIRiakDB(self._config)
-            self._metadata = db.get_metadata(image_name)
+            self._metadata = ukai_db_client.get_metadata(image_name)
 
         self._lock = []
         for idx in range(0, len(self.blocks)):
@@ -133,13 +131,11 @@ class UKAIMetadata(object):
             self.acquire_lock()
 
             # Write out to the metadata storage.
-            db = UKAIRiakDB(self._config)
-            db.put_metadata(self.name, self._metadata)
+            ukai_db_client.put_metadata(self.name, self._metadata)
 
-            # Send the latest metadata information to all the
-            # hypervisors listed in the hypervisor list of the metadata
-            # information.
-            for hv in self.hypervisors.keys():
+            # Send the latest metadata information to all the hypervisors
+            # using this virtual disk.
+            for hv in ukai_db_client.get_readers():
                 if UKAIIsLocalNode(hv):
                     continue
                 try:

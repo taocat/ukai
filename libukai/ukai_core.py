@@ -40,7 +40,7 @@ import zlib
 from ukai_config import UKAIConfig
 from ukai_data import UKAIData
 from ukai_data import ukai_data_destroy, ukai_data_location_destroy
-from ukai_db import UKAIRiakDB
+from ukai_db import ukai_db_client
 from ukai_local_io import ukai_local_read, ukai_local_write
 from ukai_local_io import ukai_local_allocate_dataspace
 from ukai_local_io import ukai_local_destroy_image
@@ -88,6 +88,7 @@ class UKAICore(object):
         self._rpc_trans = UKAIXMLRPCTranslation()
         self._open_count = UKAIOpenImageCount()
         self._fh = 0
+        ukai_db_client.connect(self._config)
 
     ''' Filesystem I/O processing.
     '''
@@ -172,28 +173,25 @@ class UKAICore(object):
                                    offset)
 
     def _get_metadata(self, image_name):
-        db = UKAIRiakDB(self._config)
-        return db.get_metadata(image_name)
+        return ukai_db_client.get_metadata(image_name)
 
     def _add_image(self, image_name):
-        if image_name in self._metadata_dict:
-            return errno.EEXIST
+        assert image_name not in self._metadata_dict
         metadata = UKAIMetadata(image_name, self._config)
+        ukai_db_client.join_reader(image_name, self._config.get('id'))
         self._metadata_dict[image_name] = metadata
         data = UKAIData(metadata=metadata,
                         node_error_state_set=self._node_error_state_set,
                         config=self._config)
         self._data_dict[image_name] = data
         UKAIStatistics[image_name] = UKAIImageStatistics()
-        return 0
 
     def _remove_image(self, image_name):
-        if image_name not in self._metadata_dict:
-            return errno.ENOENT
+        assert image_name in self._metadata_dict
+        ukai_db_client.leave_reader(image_name, self._config.get('id'))
         del self._metadata_dict[image_name]
         del self._data_dict[image_name]
         del UKAIStatistics[image_name]
-        return 0
 
     def _exists(self, image_name):
         if image_name not in self._metadata_dict:
@@ -369,8 +367,7 @@ class UKAICore(object):
         return self._node_error_state_set.get_list()
 
     def ctl_get_image_names(self):
-        db = UKAIRiakDB(self._config)
-        return db.get_image_names()
+        return ukai_db_client.get_image_names()
 
     def ctl_diag(self):
         print self._open_count._images
