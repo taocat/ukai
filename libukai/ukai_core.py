@@ -50,6 +50,24 @@ from ukai_node_error_state import UKAINodeErrorStateSet
 from ukai_rpc import UKAIXMLRPCTranslation
 from ukai_statistics import UKAIStatistics, UKAIImageStatistics
 
+class UKAIWriters(object):
+    def __init__(self):
+        self._images = {}
+
+    def add_writer(self, image_name, fh):
+        if image_name not in self._images:
+            self._images[image_name] = fh
+            return 0
+        else:
+            return errno.EBUSY
+
+    def remove_writer(self, image_name, fh):
+        if image_name not in self._images:
+            return 0
+        if self._images[image_name] == fh:
+            del self._images[image_name]
+        return 0
+
 class UKAIOpenImageCount(object):
     def __init__(self):
         self._images = {}
@@ -81,8 +99,8 @@ class UKAICore(object):
         self._data_dict = {}
         self._config = config
         self._node_error_state_set = UKAINodeErrorStateSet()
-        self._open_for_write_image_set = set()
         self._rpc_trans = UKAIXMLRPCTranslation()
+        self._writers = UKAIWriters()
         self._open_count = UKAIOpenImageCount()
         self._fh = 0
         ukai_db_client.connect(self._config)
@@ -114,18 +132,15 @@ class UKAICore(object):
             return errno.ENOENT, None
         self._fh += 1
         if (flags & 3) != os.O_RDONLY:
-            if image_name in self._open_for_write_image_set:
+            if self._writers.add_writer(image_name, self._fh) == errno.EBUSY:
                 return errno.EBUSY, None
-            else:
-                self._open_for_write_image_set.add(self._fh)
         if self._open_count.increment(image_name) == 1:
             self._add_image(image_name)
         return 0, self._fh
 
     def release(self, path, fh):
         image_name = path[1:]
-        if fh in self._open_for_write_image_set:
-            self._open_for_write_image_set.remove(fh)
+        self._writers.remove_writer(image_name, fh)
         if self._open_count.decrement(image_name) == 0:
             self._remove_image(image_name)
         return 0
@@ -366,5 +381,5 @@ class UKAICore(object):
 
     def ctl_diag(self):
         print self._open_count._images
-        print self._open_for_write_image_set
+        print self._writers._images
         return 0
