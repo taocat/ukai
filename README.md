@@ -292,6 +292,15 @@ specified virtual disk image.
 
     Usage: ukai_admin get_statistics IMAGE_NAME
 
+
+## Publication
+
+* Keiichi Shima, "UKAI: Centrally Controllable Distributed Local
+  Storage for Virtual Machine Disk Images", In Proceedings IEEE
+  Globecom 2013 Workshop on Cloud Computing Systems, Networks, and
+  Applications (CCSNA), December 9, 2013.
+  <http://member.wide.ad.jp/~shima/publications/20131209-ccsna-ukai.pdf>
+
 __________________________________________________________
 [python]: http://www.python.org/
   "Python Programming Language"
