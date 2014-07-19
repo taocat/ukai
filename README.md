@@ -302,4 +302,4 @@ __________________________________________________________
 [netifaces]: http://alastairs-place.net/projects/netifaces/
   "Portable access to network interfaces from Python"
 [zookeeper]: http://zookeeper.apache.org/
-  "Apache ZooKeeper: A centralized cluster management service.
+  "Apache ZooKeeper: A centralized cluster management service."
