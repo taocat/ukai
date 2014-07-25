@@ -131,7 +131,7 @@ class UKAIFUSE(LoggingMixIn, Operations):
         # The data returned by the UKAICore.read() method is encoded
         # using a RPC encorder.
         ret, encoded_data = self._rpc_client.call('read', path,
-                                                  size, offset)
+                                                  str(size), str(offset))
         if ret != 0:
             raise FuseOSError(ret)
         return self._rpc_trans.decode(encoded_data)
@@ -215,7 +215,7 @@ class UKAIFUSE(LoggingMixIn, Operations):
         # encoded using a proper RPC encoding mechanism.
         encoded_data = self._rpc_trans.encode(data)
         ret, nwritten = self._rpc_client.call('write', path,
-                                              encoded_data, offset)
+                                              encoded_data, str(offset))
         if ret != 0:
             raise FuseOSError(ret)
         return nwritten

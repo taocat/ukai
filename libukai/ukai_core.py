@@ -145,8 +145,10 @@ class UKAICore(object):
             self._remove_image(image_name)
         return 0
 
-    def read(self, path, size, offset):
+    def read(self, path, str_size, str_offset):
         image_name = path[1:]
+	size = int(str_size)
+	offset = int(str_offset)
         if not self._exists(image_name):
             return errno.ENOENT, None
         image_data = self._data_dict[image_name]
@@ -176,8 +178,9 @@ class UKAICore(object):
     def unlink(self, path):
         return errno.EPERM
 
-    def write(self, path, encoded_data, offset):
+    def write(self, path, encoded_data, str_offset):
         image_name = path[1:]
+	offset = int(str_offset)
         if not self._exists(image_name):
             return errno.ENOENT, None
         image_data = self._data_dict[image_name]
@@ -382,4 +385,5 @@ class UKAICore(object):
     def ctl_diag(self):
         print self._open_count._images
         print self._writers._images
+	print self._metadata_dict
         return 0
