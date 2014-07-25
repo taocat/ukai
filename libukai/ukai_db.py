@@ -30,7 +30,6 @@ import json
 import threading
 
 import kazoo.client
-import riak
 
 class UKAIDB(object):
     def __init__(self):
