@@ -231,6 +231,18 @@ class UKAICore(object):
         rpc_call = UKAIXMLRPCCall(node, self._config.get('core_port'))
         return self._rpc_trans.decode(rpc_call.call('proxy_get_available_storage_local', node))
 
+    def get_best_node(self, nodes):
+        node_list = nodes.split(',')
+        largest_avai_storage = 0
+        best_node = None
+        for node in node_list:
+            avai_storage = self.get_available_storage_remote(node)
+            if largest_avai_storage < avai_storage:
+                largest_avai_storage = avai_storage
+                best_node = node
+        return best_node
+
+
     ''' Proxy server processing.
     '''
     def proxy_read(self, image_name, block_size, block_index, offset,

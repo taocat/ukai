@@ -186,9 +186,18 @@ block_size=%d''' % (name, size, block_size)
             print name
         return 0
 
-    def print_available_storage(self, node):
+    """Get the available storage size on the specified node.
+    The node can either be local or remote.
+    The unit is K.
+    """
+    def get_available_storage(self, node):
         available = self._rpc_client.call('get_available_storage_remote', node)
         print(available)
+        return 0
+
+    def get_best_node(self, nodes):
+        best_node = self._rpc_client.call('get_best_node', nodes)
+        print(best_node)
         return 0
 
 
