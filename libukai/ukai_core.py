@@ -36,6 +36,7 @@ import os
 import stat
 import sys
 import zlib
+import subprocess
 
 from ukai_config import UKAIConfig
 from ukai_data import UKAIData
@@ -48,6 +49,7 @@ from ukai_metadata import UKAIMetadata, UKAI_OUT_OF_SYNC
 from ukai_metadata import ukai_metadata_create, ukai_metadata_destroy
 from ukai_node_error_state import UKAINodeErrorStateSet
 from ukai_rpc import UKAIXMLRPCTranslation
+from ukai_rpc import UKAIXMLRPCCall
 from ukai_statistics import UKAIStatistics, UKAIImageStatistics
 
 class UKAIWriters(object):
@@ -215,6 +217,19 @@ class UKAICore(object):
             return False
         return True
 
+    def get_available_storage_local(self):
+        path = self._config.get('data_root')
+        if not os.path.isdir(path):
+            path = '/'
+        df = subprocess.Popen(['df', path], stdout=subprocess.PIPE)
+        output = df.communicate()[0]
+        device, size, used, available, percent, mountpoint = \
+        output.split("\n")[1].split()
+        return available
+
+    def get_available_storage_remote(self, node):
+        rpc_call = UKAIXMLRPCCall(node, self._config.get('core_port'))
+        return self._rpc_trans.decode(rpc_call.call('proxy_get_available_storage_local', node))
 
     ''' Proxy server processing.
     '''
@@ -255,6 +270,9 @@ class UKAICore(object):
 
     def proxy_destroy_image(self, image_name):
         return ukai_local_destroy_image(image_name, self._config)
+
+    def proxy_get_available_storage_local(self, node):
+        return self._rpc_trans.encode(self.get_available_storage_local())
 
 
     ''' Controll processing.

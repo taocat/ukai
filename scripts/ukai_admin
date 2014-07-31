@@ -186,6 +186,11 @@ block_size=%d''' % (name, size, block_size)
             print name
         return 0
 
+    def print_available_storage(self, node):
+        available = self._rpc_client.call('get_available_storage_remote', node)
+        print(available)
+        return 0
+
 
 def usage():
     print '''Usage: %s [-s CORE_SERVER] [-p CORE_PORT] SUBCOMMAND [PARAMS]
