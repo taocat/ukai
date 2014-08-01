@@ -1,0 +1,36 @@
+#
+# UKAI config
+#
+{
+        # local identifier.
+        "id": "192.168.56.101",
+
+        # metadata server.
+        #
+        # for UKAIRiakDB
+        # "metadata_servers": [{"host": "172.16.255.2"}],
+        #
+        # for UKAIZooKeeperDB
+        "metadata_servers": "192.168.56.101",
+
+        # actual data is stored under this directory,
+        #
+        "data_root": "/var/ukai/data",
+        # with the following name.
+        "blockname_format": "%08d",
+
+        # core server
+        #
+        "core_server": "192.168.56.101",
+        "core_port": 22221,
+
+        # whetehr to cache interface address list.
+        #
+        "ifaddr_cache": true,
+
+        # image creation parameters.
+        #
+        "create_default": {
+                "block_size": 1000000
+        }
+}
