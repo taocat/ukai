@@ -34,19 +34,41 @@ import os
 import sys
 import threading
 import zlib
+import xmlrpclib
 
 import netifaces
 
 from ukai_config import UKAIConfig
-from ukai_local_io import ukai_local_read, ukai_local_write
+from ukai_local_io import ukai_local_read, ukai_local_write, ukai_local_allocate_dataspace
 from ukai_metadata import UKAIMetadata
 from ukai_metadata import UKAI_IN_SYNC, UKAI_SYNCING, UKAI_OUT_OF_SYNC
 from ukai_rpc import UKAIXMLRPCCall, UKAIXMLRPCTranslation
 from ukai_statistics import UKAIStatistics
 from ukai_utils import UKAIIsLocalNode
+from ukai_node_error_state import UKAINodeErrorStateSet
+
+def ukai_data_create(meta, config):
+    '''The ukai_data_create function creates data files of a virtual
+    disk image.
+
+    param image_name: the name of a virtual disk image
+    param config: an UKAIConfig instance
+    '''
+    ness = UKAINodeErrorStateSet()
+
+    fh = UKAIData(meta, ness, config)
+
+    block_count = meta.size / meta.block_size
+    if meta.size % meta.block_size:
+        block_count = block_count + 1
+
+    for block_num in range(0, block_count):
+        print 'sync block_num %d' % block_num
+        ukai_local_allocate_dataspace(meta.name, meta.block_size, block_num, config)
+    
 
 def ukai_data_destroy(image_name, config):
-    ''' The ukai_datadestroy function deletes data files of a virtual
+    ''' The ukai_data_destroy function deletes data files of a virtual
     disk image.
 
     param image_name: the name of a virtual disk image
