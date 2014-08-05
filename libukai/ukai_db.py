@@ -28,8 +28,11 @@
 
 import json
 import threading
+import logging
 
 import kazoo.client
+
+logging.basicConfig()
 
 class UKAIDB(object):
     def __init__(self):
