@@ -45,7 +45,7 @@ if __name__ == '__main__':
 
     fuse_foreground = False
     fuse_debug = False
-    fuse_nothreads = False
+    fuse_nothreads = True
     config_file = UKAI_CONFIG_FILE_DEFAULT
     (optlist, args) = getopt.getopt(sys.argv[1:], 'fdc:')
     for opt_pair in optlist:
