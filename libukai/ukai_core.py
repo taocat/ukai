@@ -37,6 +37,7 @@ import stat
 import sys
 import zlib
 import subprocess
+import re
 
 from ukai_config import UKAIConfig
 from ukai_data import UKAIData
@@ -129,19 +130,28 @@ class UKAICore(object):
     def open(self, path, flags):
         ret = 0
         image_name = path[1:]
+        print('opening image_name=' + image_name)
         metadata = self._get_metadata(image_name)
         if metadata is None:
+            print('metadata is None')
             return errno.ENOENT, None
         self._fh += 1
         if (flags & 3) != os.O_RDONLY:
+            print('not read only')
             if self._writers.add_writer(image_name, self._fh) == errno.EBUSY:
+                print('busy')
                 return errno.EBUSY, None
+        else:
+            print('read only')
         if self._open_count.increment(image_name) == 1:
+            print('adding image')
             self._add_image(image_name)
+        print('self._fh='+str(self._fh))
         return 0, self._fh
 
     def release(self, path, fh):
         image_name = path[1:]
+        print('releasing image_name=' + image_name + ' fh=' + str(fh))
         self._writers.remove_writer(image_name, fh)
         if self._open_count.decrement(image_name) == 0:
             self._remove_image(image_name)
@@ -224,12 +234,27 @@ class UKAICore(object):
         df = subprocess.Popen(['df', path], stdout=subprocess.PIPE)
         output = df.communicate()[0]
         device, size, used, available, percent, mountpoint = \
-        output.split("\n")[1].split()
+        output.splitlines()[1].split()
         return available
 
     def get_available_storage_remote(self, node):
         rpc_call = UKAIXMLRPCCall(node, self._config.get('core_port'))
         return self._rpc_trans.decode(rpc_call.call('proxy_get_available_storage_local', node))
+
+    def get_rtt_local(self, destination):
+        ping = subprocess.Popen(['ping', '-c', '4', destination], stdout=subprocess.PIPE)
+        output = ping.communicate()[0]
+        lastline = output.splitlines()[-1]
+        m = re.match(r".* = (.*)/(.*)/(.*)/(.*) ms", lastline)
+        if m is None:
+            return "inf"
+        else:
+            avg = m.group(2)
+            return avg
+
+    def get_rtt_remote(self, node, destination):
+        rpc_call = UKAIXMLRPCCall(node, self._config.get('core_port'))
+        return self._rpc_trans.decode(rpc_call.call('proxy_get_rtt_local', destination))
 
     def get_best_node(self, nodes):
         node_list = nodes.split(',')
@@ -286,6 +311,8 @@ class UKAICore(object):
     def proxy_get_available_storage_local(self, node):
         return self._rpc_trans.encode(self.get_available_storage_local())
 
+    def proxy_get_rtt_local(self, destination):
+        return self._rpc_trans.encode(self.get_rtt_local(destination))
 
     ''' Controll processing.
     '''

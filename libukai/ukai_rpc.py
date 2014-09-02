@@ -64,6 +64,7 @@ class UKAIXMLRPCCall(UKAIRPCCall):
             'http://%s:%d' % (self._server, self._port),
             allow_none=True)
         try:
+            print('method='+method)
             return getattr(client, method)(*params)
         except xmlrpclib.Error, e:
             print e.__class__

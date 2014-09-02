@@ -200,6 +200,16 @@ block_size=%d''' % (name, size, block_size)
         print(best_node)
         return 0
 
+    def get_rtt_local(self, destination):
+        rtt = self._rpc_client.call('get_rtt_local', destination)
+        print(rtt)
+        return 0
+
+    def get_rtt_remote(self, node, destination):
+        rtt = self._rpc_client.call('get_rtt_remote', node, destination)
+        print(rtt)
+        return 0
+
 
 def usage():
     print '''Usage: %s [-s CORE_SERVER] [-p CORE_PORT] SUBCOMMAND [PARAMS]
