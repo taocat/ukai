@@ -335,7 +335,6 @@ class UKAICore(object):
 
         meta = ukai_metadata_create(image_name, size, block_size,
                              location, self._config)
-        data = ukai_data_create(meta, self._config)
 
     def ctl_destroy_image(self, image_name):
         assert image_name is not None

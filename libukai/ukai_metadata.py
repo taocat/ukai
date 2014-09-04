@@ -73,7 +73,7 @@ def ukai_metadata_create(image_name, size, block_size, location, config):
 
     metadata = UKAIMetadata(image_name, config, metadata_raw)
     metadata.flush()
-    return metadata
+    del metadata
 
 def ukai_metadata_destroy(image_name, config):
     ''' The ukai_metadata_destroy function deletes metadata
