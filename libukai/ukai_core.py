@@ -35,6 +35,7 @@ import json
 import os
 import stat
 import sys
+import threading
 import zlib
 import subprocess
 import re
@@ -52,6 +53,9 @@ from ukai_node_error_state import UKAINodeErrorStateSet
 from ukai_rpc import UKAIXMLRPCTranslation
 from ukai_rpc import UKAIXMLRPCCall
 from ukai_statistics import UKAIStatistics, UKAIImageStatistics
+
+# XXX Fix this
+lock = threading.Lock()
 
 class UKAIWriters(object):
     def __init__(self):
@@ -128,34 +132,33 @@ class UKAICore(object):
         return ret, json.dumps(st)
 
     def open(self, path, flags):
-        ret = 0
-        image_name = path[1:]
-        print('opening image_name=' + image_name)
-        metadata = self._get_metadata(image_name)
-        if metadata is None:
-            print('metadata is None')
-            return errno.ENOENT, None
-        self._fh += 1
-        if (flags & 3) != os.O_RDONLY:
-            print('not read only')
-            if self._writers.add_writer(image_name, self._fh) == errno.EBUSY:
-                print('busy')
-                return errno.EBUSY, None
-        else:
-            print('read only')
-        if self._open_count.increment(image_name) == 1:
-            print('adding image')
-            self._add_image(image_name)
-        print('self._fh='+str(self._fh))
-        return 0, self._fh
+      try:
+          lock.acquire()
+          ret = 0
+          image_name = path[1:]
+          metadata = self._get_metadata(image_name)
+          if metadata is None:
+              return errno.ENOENT, None
+          self._fh += 1
+          if (flags & 3) != os.O_RDONLY:
+              if self._writers.add_writer(image_name, self._fh) == errno.EBUSY:
+                  return errno.EBUSY, None
+          if self._open_count.increment(image_name) == 1:
+              self._add_image(image_name)
+          return 0, self._fh
+      finally:
+          lock.release()
 
     def release(self, path, fh):
-        image_name = path[1:]
-        print('releasing image_name=' + image_name + ' fh=' + str(fh))
-        self._writers.remove_writer(image_name, fh)
-        if self._open_count.decrement(image_name) == 0:
-            self._remove_image(image_name)
-        return 0
+      try:
+          lock.acquire()
+          image_name = path[1:]
+          self._writers.remove_writer(image_name, fh)
+          if self._open_count.decrement(image_name) == 0:
+              self._remove_image(image_name)
+          return 0
+      finally:
+          lock.release()
 
     def read(self, path, str_size, str_offset):
         image_name = path[1:]
@@ -270,14 +273,21 @@ class UKAICore(object):
 
     ''' Proxy server processing.
     '''
-    def proxy_read(self, image_name, block_size, block_index, offset,
-                   size):
+    def proxy_read(self, image_name, str_block_size, str_block_index,
+                   str_offset, str_size):
+        block_size = int(str_block_size)
+        block_index = int(str_block_index)
+        offset = int(str_offset)
+        size = int(str_size)
         data = ukai_local_read(image_name, block_size, block_index,
                                offset, size, self._config)
         return self._rpc_trans.encode(zlib.compress(data))
 
-    def proxy_write(self, image_name, block_size, block_index, offset,
-                    encoded_data):
+    def proxy_write(self, image_name, str_block_size, str_block_index,
+                    str_offset, encoded_data):
+        block_size = int(str_block_size)
+        block_index = int(str_block_index)
+        offset = int(str_offset)
         data = zlib.decompress(self._rpc_trans.decode(encoded_data))
         return ukai_local_write(image_name, block_size, block_index,
                                 offset, data, self._config)

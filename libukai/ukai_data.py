@@ -168,9 +168,9 @@ class UKAIData(object):
         assert size > 0
         assert offset >= 0
 
-        if offset > self._metadata.used_size:
+        if offset >= self._metadata.used_size:
             # end of the file.
-            return (0)
+            return ('')
         if offset + size > self._metadata.used_size:
             # shorten the size not to overread the end of the file.
             size = self._metadata.used_size - offset
@@ -297,10 +297,10 @@ class UKAIData(object):
                                   self._config.get('core_port'))
         encoded_data = rpc_call.call('proxy_read',
                                      self._metadata.name,
-                                     self._metadata.block_size,
-                                     blk_idx,
-                                     off_in_blk,
-                                     size_in_blk)
+                                     str(self._metadata.block_size),
+                                     str(blk_idx),
+                                     str(off_in_blk),
+                                     str(size_in_blk))
         return zlib.decompress(self._rpc_trans.decode(encoded_data))
 
     def write(self, data, offset):
@@ -421,9 +421,9 @@ class UKAIData(object):
         rpc_call = UKAIXMLRPCCall(node, self._config.get('core_port'))
         return rpc_call.call('proxy_write',
                              self._metadata.name,
-                             self._metadata.block_size,
-                             blk_idx,
-                             off_in_blk,
+                             str(self._metadata.block_size),
+                             str(blk_idx),
+                             str(off_in_blk),
                              self._rpc_trans.encode(zlib.compress(data)))
 
     def synchronize_block(self, blk_idx):
