@@ -42,7 +42,7 @@ import re
 
 from ukai_config import UKAIConfig
 from ukai_data import UKAIData
-from ukai_data import ukai_data_create, ukai_data_destroy, ukai_data_location_destroy
+from ukai_data import ukai_data_destroy, ukai_data_location_destroy
 from ukai_db import ukai_db_client
 from ukai_local_io import ukai_local_read, ukai_local_write
 from ukai_local_io import ukai_local_allocate_dataspace
@@ -343,7 +343,7 @@ class UKAICore(object):
         if location is None:
             location = self._config.get('core_server')
 
-        meta = ukai_metadata_create(image_name, size, block_size,
+        ukai_metadata_create(image_name, size, block_size,
                              location, self._config)
 
     def ctl_destroy_image(self, image_name):
