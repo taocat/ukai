@@ -240,9 +240,25 @@ class UKAICore(object):
         output.splitlines()[1].split()
         return available
 
+    def get_total_storage_local(self):
+        path = self._config.get('data_root')
+        if not os.path.isdir(path):
+            path = '/'
+        df = subprocess.Popen(['df', path], stdout=subprocess.PIPE)
+        output = df.communicate()[0]
+        device, size, used, available, percent, mountpoint = \
+        output.splitlines()[1].split()
+        return size
+
     def get_available_storage_remote(self, node):
         rpc_call = UKAIXMLRPCCall(node, self._config.get('core_port'))
-        return self._rpc_trans.decode(rpc_call.call('proxy_get_available_storage_local', node))
+        available = self._rpc_trans.decode(rpc_call.call('proxy_get_available_storage_local', node))
+        return available
+
+    def get_total_storage_remote(self, node):
+        rpc_call = UKAIXMLRPCCall(node, self._config.get('core_port'))
+        total = self._rpc_trans.decode(rpc_call.call('proxy_get_total_storage_local', node))
+        return total
 
     def get_rtt_local(self, destination):
         ping = subprocess.Popen(['ping', '-c', '4', destination], stdout=subprocess.PIPE)
@@ -320,6 +336,9 @@ class UKAICore(object):
 
     def proxy_get_available_storage_local(self, node):
         return self._rpc_trans.encode(self.get_available_storage_local())
+
+    def proxy_get_total_storage_local(self, node):
+        return self._rpc_trans.encode(self.get_total_storage_local())
 
     def proxy_get_rtt_local(self, destination):
         return self._rpc_trans.encode(self.get_rtt_local(destination))

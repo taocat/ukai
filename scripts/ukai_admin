@@ -195,6 +195,11 @@ block_size=%d''' % (name, size, block_size)
         print(available)
         return 0
 
+    def get_total_storage(self, node):
+        total = self._rpc_client.call('get_total_storage_remote', node)
+        print(total)
+        return 0
+
     def get_best_node(self, nodes):
         best_node = self._rpc_client.call('get_best_node', nodes)
         print(best_node)
